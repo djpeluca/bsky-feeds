@@ -1,5 +1,5 @@
 import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
+import { open, Database } from 'sqlite';
 import dotenv from 'dotenv';
 import { InvalidRequestError } from '@atproto/xrpc-server';
 
@@ -79,5 +79,5 @@ function generateObjectId() {
   return 'generatedObjectId';
 }
 
-const dbClient = new DbSingleton('path/to/your/sqlite/database.db');
+const dbClient = new DbSingleton(process.env.FEEDGEN_SQLITE_PATH);
 export default dbClient;
