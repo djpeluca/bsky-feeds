@@ -78,13 +78,13 @@
     "@noble/hashes" "^1.3.1"
     uint8arrays "3.0.0"
 
-"@atproto/identity@^0.3.2":
-  version "0.3.2"
-  resolved "https://registry.yarnpkg.com/@atproto/identity/-/identity-0.3.2.tgz#8a0536bc19ccbc45a04df84c3f30d86f58f964ee"
-  integrity sha512-xZSyB3gHn/avwdAIV+mECvjjvMYXxPSvSgVBUsETMvMY72H9d84utDD58y5aAU/9mL+founaNZmniKDaR633CQ==
+"@atproto/identity@^0.4.1":
+  version "0.4.1"
+  resolved "https://registry.yarnpkg.com/@atproto/identity/-/identity-0.4.1.tgz#749e2776bda71b938b7aa4f1966471ad3fd5039c"
+  integrity sha512-5AoPJDSD0rAay/6Sib+n/FjfwGulM/+xCNxwwDLR9QI4EoeUlvIH8g5BNdix812v312/Qd42kJrLpCNTZ5rvew==
   dependencies:
-    "@atproto/common-web" "^0.2.3"
-    "@atproto/crypto" "^0.3.0"
+    "@atproto/common-web" "^0.3.0"
+    "@atproto/crypto" "^0.4.1"
     axios "^0.27.2"
 
 "@atproto/lexicon@^0.3.1":
