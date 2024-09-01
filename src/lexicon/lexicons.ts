@@ -3369,7 +3369,6 @@ export const schemaDict = {
           'commit',
           'rev',
           'since',
-          'blocks',
           'ops',
           'blobs',
           'time',
