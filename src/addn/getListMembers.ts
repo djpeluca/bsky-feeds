@@ -1,9 +1,9 @@
-import { BskyAgent } from '@atproto/api'
+import { Agent } from '@atproto/api'
 import limit from './rateLimit'
 
 export const getListMembers = async (
   list: string,
-  agent: BskyAgent,
+  agent: Agent,
 ): Promise<string[]> => {
   let total_retrieved = 1
   let current_cursor: string | undefined = undefined

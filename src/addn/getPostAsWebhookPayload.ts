@@ -1,9 +1,9 @@
-import { BskyAgent } from '@atproto/api'
+import { Agent } from '@atproto/api'
 import limit from './rateLimit'
 
 export const getPostAsWebhookPayload = async (
   post_uri: string,
-  agent: BskyAgent,
+  agent: Agent,
   additional_fields: any[] = [],
 ) => {
   const post_detail = await limit(() =>
