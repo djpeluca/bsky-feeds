@@ -1,9 +1,9 @@
-import { BskyAgent } from '@atproto/api'
+import { Agent } from '@atproto/api'
 import limit from './rateLimit'
 
 export const resolveHandleToDID = async (
   author: string,
-  agent: BskyAgent,
+  agent: Agent,
 ): Promise<string> => {
   return (
     await limit(() =>

@@ -1,11 +1,11 @@
-import { BskyAgent } from '@atproto/api'
+import { Agent } from '@atproto/api'
 import limit from './rateLimit'
 
 import { Post } from '../db/schema'
 
 export const getPostFromURI = async (
   atUri: string,
-  agent: BskyAgent,
+  agent: Agent,
 ): Promise<Post | undefined> => {
   const [repo, collection, rkey] = atUri.startsWith('at://')
     ? atUri.replace('at://', '').split('/')

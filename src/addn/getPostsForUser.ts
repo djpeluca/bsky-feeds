@@ -1,5 +1,5 @@
 import dotenv from 'dotenv'
-import { BskyAgent } from '@atproto/api'
+import { Agent } from '@atproto/api'
 import { Post } from '../db/schema'
 
 import crypto from 'crypto'
@@ -8,7 +8,7 @@ import limit from './rateLimit'
 
 export const getPostsForUser = async (
   author: string,
-  agent: BskyAgent,
+  agent: Agent,
 ): Promise<Post[]> => {
   dotenv.config()
 

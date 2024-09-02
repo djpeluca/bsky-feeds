@@ -1,9 +1,9 @@
-import { BskyAgent } from '@atproto/api'
+import { Agent } from '@atproto/api'
 import resolveHandleToDID from './resolveHandleToDID'
 import moize from 'moize'
 import limit from './rateLimit'
 
-export const _getUserFollows = async (user: string, agent: BskyAgent) => {
+export const _getUserFollows = async (user: string, agent: Agent) => {
   let user_did = ''
   const follows: string[] = []
 

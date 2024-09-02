@@ -1,13 +1,13 @@
 import dotenv from 'dotenv'
 import { Database } from '../db'
 import { Post } from '../db/schema'
-import { BskyAgent } from '@atproto/api'
+import { Agent } from '@atproto/api'
 
 export class AlgoManager {
   private static _instance: AlgoManager
 
   public db: Database
-  public agent: BskyAgent
+  public agent: Agent
   public periodicIntervalId: NodeJS.Timer
 
   public name: string = ''
@@ -15,7 +15,7 @@ export class AlgoManager {
   public _isReady: Boolean = false
   public _isStarting: Boolean = false
 
-  constructor(db: Database, agent: BskyAgent) {
+  constructor(db: Database, agent: Agent) {
     this.db = db
     this.agent = agent
     this._isReady = false
