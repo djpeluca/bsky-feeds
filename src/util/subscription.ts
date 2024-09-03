@@ -22,14 +22,14 @@ export abstract class FirehoseSubscriptionBase {
       method: ids.ComAtprotoSyncSubscribeRepos,
       getParams: () => this.getCursor(),
       validate: (value: unknown) => {
-     //   try {
+        try {
           return lexicons.assertValidXrpcMessage<RepoEvent>(
             ids.ComAtprotoSyncSubscribeRepos,
             value,
           )
-      //  } catch (err) {
-      //    console.error('repo subscription skipped invalid message', err)
-      //  }
+        } catch (err) {
+          console.error('repo subscription skipped invalid message', err)
+        }
       },
     })
   }
