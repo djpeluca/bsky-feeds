@@ -12,7 +12,9 @@ import { Database } from './db'
 
 import crypto from 'crypto'
 import { Post } from './db/schema'
-import { BskyAgent } from '@atproto/api'
+
+import { AtpAgent } from '@atproto/api'
+
 
 export class FirehoseSubscription extends FirehoseSubscriptionBase {
   public algoManagers: any[]
@@ -22,7 +24,8 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
 
     this.algoManagers = []
 
-    const agent = new BskyAgent({ service: 'https://bsky.social' })
+    const agent = new AtpAgent({ service: 'https://bsky.social' })
+
 
     dotenv.config()
     const handle = `${process.env.FEEDGEN_HANDLE}`
