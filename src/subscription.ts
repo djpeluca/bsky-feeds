@@ -52,80 +52,88 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
   public intervalId: NodeJS.Timer
 
   async handleEvent(evt: RepoEvent) {
-    if (!isCommit(evt)) return
+    try {
+      if (!isCommit(evt)) return
 
-    await Promise.all(this.algoManagers.map((manager) => manager.ready()))
+      await Promise.all(this.algoManagers.map((manager) => manager.ready()))
 
-    const ops = await (async () => {
-      try {
-        return await getOpsByType(evt)
-      } catch (e) {
-        console.log(`core: error decoding ops ${e.message}`)
-        return undefined
-      }
-    })()
-
-    if (!ops) return
-
-    const postsToDelete = ops.posts.deletes.map((del) => del.uri)
-
-    // Transform posts in parallel
-    const postsCreated = ops.posts.creates.map((create) => ({
-      _id: null,
-      uri: create.uri,
-      cid: create.cid,
-      author: create.author,
-      text: create.record?.text,
-      replyParent: create.record?.reply?.parent.uri ?? null,
-      replyRoot: create.record?.reply?.root.uri ?? null,
-      indexedAt: new Date().getTime(),
-      algoTags: null,
-      embed: create.record?.embed,
-      tags: Array.isArray(create.record?.tags) ? create.record?.tags : [],
-    }))
-
-    const postsToCreatePromises = postsCreated.map(async (post) => {
-      const algoTagsPromises = this.algoManagers.map(async (manager) => {
+      const ops = await (async () => {
         try {
-          const includeAlgo = await manager.filter_post(post)
-          return includeAlgo ? manager.name : null
-        } catch (err) {
-          console.error(`${manager.name}: filter failed`, err)
-          return null
+          return await getOpsByType(evt)
+        } catch (e) {
+          console.log(`core: error decoding ops ${e.message}`)
+          return undefined
+        }
+      })()
+
+      if (!ops) return
+
+      const postsToDelete = ops.posts.deletes.map((del) => del.uri)
+
+      // Transform posts in parallel
+      const postsCreated = ops.posts.creates.map((create) => ({
+        _id: null,
+        uri: create.uri,
+        cid: create.cid,
+        author: create.author,
+        text: create.record?.text,
+        replyParent: create.record?.reply?.parent.uri ?? null,
+        replyRoot: create.record?.reply?.root.uri ?? null,
+        indexedAt: new Date().getTime(),
+        algoTags: null,
+        embed: create.record?.embed,
+        tags: Array.isArray(create.record?.tags) ? create.record?.tags : [],
+      }))
+
+      const postsToCreatePromises = postsCreated.map(async (post) => {
+        const algoTagsPromises = this.algoManagers.map(async (manager) => {
+          try {
+            const includeAlgo = await manager.filter_post(post)
+            return includeAlgo ? manager.name : null
+          } catch (err) {
+            console.error(`${manager.name}: filter failed`, err)
+            return null
+          }
+        })
+
+        const algoTagsResults = await Promise.all(algoTagsPromises)
+        const algoTags = algoTagsResults.filter((tag) => tag !== null)
+
+        if (algoTags.length === 0) return null
+
+        const hash = crypto
+          .createHash('shake256', { outputLength: 12 })
+          .update(post.uri)
+          .digest('hex')
+          .toString()
+
+        return {
+          ...post,
+          _id: hash,
+          algoTags: algoTags,
         }
       })
 
-      const algoTagsResults = await Promise.all(algoTagsPromises)
-      const algoTags = algoTagsResults.filter((tag) => tag !== null)
+      const postsToCreate = (await Promise.all(postsToCreatePromises)).filter(
+        (post) => post !== null,
+      )
 
-      if (algoTags.length === 0) return null
-
-      const hash = crypto
-        .createHash('shake256', { outputLength: 12 })
-        .update(post.uri)
-        .digest('hex')
-        .toString()
-
-      return {
-        ...post,
-        _id: hash,
-        algoTags: algoTags,
+      if (postsToDelete.length > 0) {
+        await this.db.deleteManyURI('post', postsToDelete)
       }
-    })
 
-    const postsToCreate = (await Promise.all(postsToCreatePromises)).filter(
-      (post) => post !== null,
-    )
-
-    if (postsToDelete.length > 0) {
-      await this.db.deleteManyURI('post', postsToDelete)
-    }
-
-    if (postsToCreate.length > 0) {
-      postsToCreate.forEach(async (to_insert) => {
-        if (to_insert)
-          await this.db.replaceOneURI('post', to_insert.uri, to_insert)
-      })
+      if (postsToCreate.length > 0) {
+        postsToCreate.forEach(async (to_insert) => {
+          if (to_insert)
+            await this.db.replaceOneURI('post', to_insert.uri, to_insert)
+        })
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Message must have the property \"blocks\"")) {
+        console.warn("Skipping invalid message:", error.message);
+        return;
+      }
+      throw error;  // Re-throw other errors
     }
   }
 }
