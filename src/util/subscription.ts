@@ -39,9 +39,12 @@ export abstract class FirehoseSubscriptionBase {
   async run(reconnectDelay: number) {
     while (true) {
       try {
+        console.log("Starting firehose subscription...")
         for await (const evt of this.sub) {
+          console.log("Received event:", JSON.stringify(evt, null, 2))
           try {
-            await this.handleEvent(evt)
+            const result = await this.handleEvent(evt)
+            console.log("Event processed:", result)
           } catch (err) {
             if (err instanceof Error && err.message.includes("Message must have the property \"blocks\"")) {
               console.warn("Skipping invalid message:", err.message)
