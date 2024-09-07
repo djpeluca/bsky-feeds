@@ -36,25 +36,19 @@ export abstract class FirehoseSubscriptionBase {
 
   abstract handleEvent(evt: RepoEvent): Promise<void>
 
-  async run(subscriptionReconnectDelay: number) {
-    try {
-      for await (const evt of this.sub) {
-        try {
-          this.handleEvent(evt) // no longer awaiting this
-        } catch (err) {
-          console.error('repo subscription could not handle message', err)
+  async run() {
+    for await (const evt of this.sub) {
+      try {
+        await this.handleEvent(evt)
+      } catch (err) {
+        if (err instanceof Error && err.message.includes("Message must have the property \"blocks\"")) {
+          console.warn("Skipping invalid message:", err.message)
+          continue
         }
-        // update stored cursor every 20 events or so
-        if (isCommit(evt) && evt.seq % 20 === 0) {
-          await this.updateCursor(evt.seq)
-        }
+        console.error('Error processing event:', err)
+        // Optionally, add a small delay before continuing to avoid tight error loops
+        await new Promise(resolve => setTimeout(resolve, 1000))
       }
-    } catch (err) {
-      console.error('repo subscription errored', err)
-      setTimeout(
-        () => this.run(subscriptionReconnectDelay),
-        subscriptionReconnectDelay,
-      )
     }
   }
 
