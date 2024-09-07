@@ -41,9 +41,9 @@ export abstract class FirehoseSubscriptionBase {
       try {
         console.log("Starting firehose subscription...")
         for await (const evt of this.sub) {
-          if (evt.ops && evt.ops.length > 0) {
+          if (evt.ops && Array.isArray(evt.ops)) {
             evt.ops.forEach(op => {
-              if (op.path) {
+              if (op && typeof op === 'object' && 'path' in op) {
                 console.log("Event path:", op.path);
               }
             });
