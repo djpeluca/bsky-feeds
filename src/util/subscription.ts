@@ -44,7 +44,10 @@ export abstract class FirehoseSubscriptionBase {
           if (evt.ops && Array.isArray(evt.ops)) {
             evt.ops.forEach(op => {
               if (op && typeof op === 'object' && 'path' in op) {
-                console.log("Event path:", op.path);
+                if (op.path.startsWith('app.bsky.feed.post/')) {
+                  console.log("Found post event:");
+                  console.log(JSON.stringify(op, null, 2));
+                }
               }
             });
           }
