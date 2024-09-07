@@ -41,10 +41,15 @@ export abstract class FirehoseSubscriptionBase {
       try {
         console.log("Starting firehose subscription...")
         for await (const evt of this.sub) {
-          console.log("Received event:", JSON.stringify(evt, null, 2))
+          if (evt.ops && evt.ops.length > 0) {
+            evt.ops.forEach(op => {
+              if (op.path) {
+                console.log("Event path:", op.path);
+              }
+            });
+          }
           try {
-            const result = await this.handleEvent(evt)
-            console.log("Event processed:", result)
+            await this.handleEvent(evt)
           } catch (err) {
             if (err instanceof Error && err.message.includes("Message must have the property \"blocks\"")) {
               console.warn("Skipping invalid message:", err.message)
