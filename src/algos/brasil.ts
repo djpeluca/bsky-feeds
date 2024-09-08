@@ -128,6 +128,8 @@ export class manager extends AlgoManager {
     let matchString = ''
     let matchDescription = ''
 
+    console.log("Filtering post with text:", post.text)
+
     if (post.embed?.images) {
       const imagesArr = post.embed.images
       imagesArr.forEach((image) => {
@@ -137,20 +139,25 @@ export class manager extends AlgoManager {
 
     matchString = `${post.text} ${matchString}`.replace('\n', ' ')
 
+    console.log("Match string:", matchString)
+
     this.matchPatterns.forEach((pattern) => {
       if (matchString.match(pattern) !== null) {
+        console.log("Matched pattern:", pattern)
         match = true
       }
     })
 
     this.matchTerms.forEach((term) => {
       if (matchString.match(term) !== null) {
+        console.log("Matched term:", term)
         match = true
       }
     })
 
     this.matchUsers.forEach((user) => {
       if (matchString.match(user) !== null) {
+        console.log("Matched user:", user)
         match = true
       }
     })
@@ -165,6 +172,7 @@ export class manager extends AlgoManager {
       }
     })
 
+    console.log("Match result:", match)
     return match
   }
 }

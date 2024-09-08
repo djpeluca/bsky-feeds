@@ -39,18 +39,7 @@ export abstract class FirehoseSubscriptionBase {
   async run(reconnectDelay: number) {
     while (true) {
       try {
-        console.log("Starting firehose subscription...")
         for await (const evt of this.sub) {
-          if (evt.ops && Array.isArray(evt.ops)) {
-            evt.ops.forEach(op => {
-              if (op && typeof op === 'object' && 'path' in op) {
-                if (op.path.startsWith('app.bsky.feed.post/')) {
-                  console.log("Found post event:");
-                  console.log(JSON.stringify(evt, null, 2));
-                }
-              }
-            });
-          }
           try {
             await this.handleEvent(evt)
           } catch (err) {
