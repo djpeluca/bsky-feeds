@@ -137,7 +137,6 @@ export class manager extends AlgoManager {
 
     matchString = `${post.text} ${matchString}`.replace('\n', ' ')
 
-
     this.matchPatterns.forEach((pattern) => {
       if (matchString.match(pattern) !== null) {
         match = true
@@ -165,18 +164,6 @@ export class manager extends AlgoManager {
         match = true
       }
     })
-
-    if (match) {
-      try {
-        console.log("Attempting to insert post " + post.text + " into database:", post.cid)
-        // Assuming you have a method like insertPost in your database class
-        await this.db.insertPost(post)
-        console.log("Successfully inserted post:", post.cid)
-      } catch (error) {
-        console.error("Error inserting post into database:", error)
-        console.error("Post details:", JSON.stringify(post, null, 2))
-      }
-    }
 
     return match
   }
