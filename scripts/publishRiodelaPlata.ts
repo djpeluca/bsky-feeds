@@ -25,7 +25,7 @@ const run = async () => {
 
   // (Optional) A description of your feed
   // Ex: Top trending content from the whole network
-  const description = 'Feed de las Provincias Unidas del Río de la Plata, este feed es una Union del Feed de Uruguay y el de Argentina  ! EN MANTENIMIENTO'
+  const description = 'Feed de las Provincias Unidas del Río de la Plata, este feed es una Union del Feed de Uruguay y el de Argentina'
 
   // (Optional) The path to an image to be used as your feed's avatar
   // Ex: ~/path/to/avatar.jpeg

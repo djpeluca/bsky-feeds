@@ -46,8 +46,6 @@ class dbSingleton {
     }
 
     try {
-      console.log(`Attempting upsert for document with URI: ${uri}`)
-      console.log('Document data:', JSON.stringify(data, null, 2));
       const result = await this.client
         ?.db()
         .collection(collection)
@@ -56,18 +54,6 @@ class dbSingleton {
           { $set: data },
           { upsert: true }
         )
-      
-      if (result) {
-        if (result.upsertedCount > 0) {
-          console.log(`Inserted new document with URI: ${uri}`)
-        } else if (result.modifiedCount > 0) {
-          console.log(`Updated existing document with URI: ${uri}`)
-        } else {
-          console.log(`Document with URI: ${uri} already up to date`)
-        }
-      } else {
-        console.warn(`No result returned for upsert operation on URI: ${uri}`)
-      }
 
       return result
     } catch (err) {
@@ -375,7 +361,6 @@ class dbSingleton {
         },
         validationLevel: "moderate"
       });
-      console.log("Post collection validator updated successfully", result);
     } catch (error) {
       console.error("Error updating post collection validator:", error);
     }
