@@ -46,20 +46,20 @@ class dbSingleton {
 
     try {
       await this.client?.db().collection(collection).insertOne(data)
-      console.log(`Successfully inserted document with URI: ${uri}`)
+      console.log(`[${Math.random().toString(36).substring(7)}] Successfully inserted document with URI: ${uri}`)
     } catch (err) {
-      console.log(`Insertion failed, attempting to replace. URI: ${uri}`)
+      console.log(`[${Math.random().toString(36).substring(7)}] Insertion failed, attempting to replace. URI: ${uri}`)
       try {
         const result = await this.client
           ?.db()
           .collection(collection)
           .replaceOne({ uri: uri }, data)
-        console.log(`Replace operation result for URI ${uri}:`, result)
+        console.log(`[${Math.random().toString(36).substring(7)}] Replace operation result for URI ${uri}:`, result)
         if (result?.matchedCount === 0) {
-          console.warn(`No document matched for replacement. URI: ${uri}`)
+          console.warn(`[${Math.random().toString(36).substring(7)}] No document matched for replacement. URI: ${uri}`)
         }
       } catch (replaceErr) {
-        console.error(`Error during replace operation for URI ${uri}:`, replaceErr)
+        console.error(`[${Math.random().toString(36).substring(7)}] Error during replace operation for URI ${uri}:`, replaceErr)
         throw replaceErr // Re-throw the error
       }
     }
