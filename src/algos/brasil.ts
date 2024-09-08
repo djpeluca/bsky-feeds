@@ -93,11 +93,7 @@ export class manager extends AlgoManager {
     /\b\w+ém\b/,
     /\b\w*nh\w*\b/,
     /\b\w*lh\w*\b/,
-    /\b\w+am\b/,
-    /\b\w*ç\w*\b/,
-    /\b\w+ou\b/,
-    /\b\w*ei\w*\b/,
-    /\bdes\w+\b/
+    /\b\w*ç\w*\b/
   ]
 
   // Include Portuguese users here to always include their posts
