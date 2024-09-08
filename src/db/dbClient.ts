@@ -39,29 +39,39 @@ class dbSingleton {
   }
 
   async replaceOneURI(collection: string, uri: string, data: any) {
-    if (!(typeof data._id === typeof '')) data._id = new ObjectId()
-    else {
+    if (!(typeof data._id === typeof '')) {
+      data._id = new ObjectId()
+    } else {
       data._id = new ObjectId(data._id)
     }
 
     try {
-      await this.client?.db().collection(collection).insertOne(data)
-      console.log(`[${Math.random().toString(36).substring(7)}] Successfully inserted document with URI: ${uri}`)
-    } catch (err) {
-      console.log(`[${Math.random().toString(36).substring(7)}] Insertion failed, attempting to replace. URI: ${uri}`)
-      try {
-        const result = await this.client
-          ?.db()
-          .collection(collection)
-          .replaceOne({ uri: uri }, data)
-        console.log(`[${Math.random().toString(36).substring(7)}] Replace operation result for URI ${uri}:`, result)
-        if (result?.matchedCount === 0) {
-          console.warn(`[${Math.random().toString(36).substring(7)}] No document matched for replacement. URI: ${uri}`)
+      console.log(`Attempting upsert for document with URI: ${uri}`)
+      const result = await this.client
+        ?.db()
+        .collection(collection)
+        .updateOne(
+          { uri: uri },
+          { $set: data },
+          { upsert: true }
+        )
+      
+      if (result) {
+        if (result.upsertedCount > 0) {
+          console.log(`Inserted new document with URI: ${uri}`)
+        } else if (result.modifiedCount > 0) {
+          console.log(`Updated existing document with URI: ${uri}`)
+        } else {
+          console.log(`Document with URI: ${uri} already up to date`)
         }
-      } catch (replaceErr) {
-        console.error(`[${Math.random().toString(36).substring(7)}] Error during replace operation for URI ${uri}:`, replaceErr)
-        throw replaceErr // Re-throw the error
+      } else {
+        console.warn(`No result returned for upsert operation on URI: ${uri}`)
       }
+
+      return result
+    } catch (err) {
+      console.error(`Error during upsert operation for URI ${uri}:`, err)
+      throw err // Re-throw the error for handling in the calling function
     }
   }
 
