@@ -47,6 +47,7 @@ class dbSingleton {
 
     try {
       console.log(`Attempting upsert for document with URI: ${uri}`)
+      console.log('Document data:', JSON.stringify(data, null, 2));
       const result = await this.client
         ?.db()
         .collection(collection)
@@ -71,6 +72,9 @@ class dbSingleton {
       return result
     } catch (err) {
       console.error(`Error during upsert operation for URI ${uri}:`, err)
+      if (err.errInfo && err.errInfo.details) {
+        console.error('Validation error details:', JSON.stringify(err.errInfo.details, null, 2))
+      }
       throw err // Re-throw the error for handling in the calling function
     }
   }

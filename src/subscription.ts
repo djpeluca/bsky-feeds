@@ -126,7 +126,6 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         postsToCreate.forEach(async (to_insert) => {
           try {
             await this.db.replaceOneURI('post', to_insert.uri, to_insert)
-            
           } catch (error) {
             console.error(`Error replacing/inserting post with URI: ${to_insert.uri}`)
             console.error(`Error details:`, error)
