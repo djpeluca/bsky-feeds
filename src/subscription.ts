@@ -124,8 +124,18 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
 
       if (postsToCreate.length > 0) {
         postsToCreate.forEach(async (to_insert) => {
-          if (to_insert)
+          try {
+            console.log(`Attempting to replace/insert post with URI: ${to_insert.uri}`)
+            console.log(`Post data:`, JSON.stringify(to_insert, null, 2))
+            
             await this.db.replaceOneURI('post', to_insert.uri, to_insert)
+            
+            console.log(`Successfully replaced/inserted post with URI: ${to_insert.uri}`)
+          } catch (error) {
+            console.error(`Error replacing/inserting post with URI: ${to_insert.uri}`)
+            console.error(`Error details:`, error)
+            console.error(`Post data that failed to insert:`, JSON.stringify(to_insert, null, 2))
+          }
         })
       }
     } catch (error) {
