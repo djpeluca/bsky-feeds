@@ -46,11 +46,22 @@ class dbSingleton {
 
     try {
       await this.client?.db().collection(collection).insertOne(data)
+      console.log(`Successfully inserted document with URI: ${uri}`)
     } catch (err) {
-      await this.client
-        ?.db()
-        .collection(collection)
-        .replaceOne({ uri: uri }, data)
+      console.log(`Insertion failed, attempting to replace. URI: ${uri}`)
+      try {
+        const result = await this.client
+          ?.db()
+          .collection(collection)
+          .replaceOne({ uri: uri }, data)
+        console.log(`Replace operation result for URI ${uri}:`, result)
+        if (result?.matchedCount === 0) {
+          console.warn(`No document matched for replacement. URI: ${uri}`)
+        }
+      } catch (replaceErr) {
+        console.error(`Error during replace operation for URI ${uri}:`, replaceErr)
+        throw replaceErr // Re-throw the error
+      }
     }
   }
 
