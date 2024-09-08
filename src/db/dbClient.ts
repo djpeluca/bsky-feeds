@@ -15,7 +15,7 @@ class dbSingleton {
   client: MongoClient | null = null
 
   constructor(connection_string: string) {
-    this.client = new MongoClient(connection_string, { enableUtf8Validation: false })
+    this.client = new MongoClient(connection_string)
     this.init()
   }
 
@@ -354,6 +354,31 @@ class dbSingleton {
       .findOne({ uri: uri })
     if (results === undefined) return null
     return results
+  }
+
+  async updatePostValidator() {
+    try {
+      const result = await this.client?.db().command({
+        collMod: "post",
+        validator: {
+          $jsonSchema: {
+            bsonType: "object",
+            required: ["uri", "cid", "author", "indexedAt"],
+            properties: {
+              uri: { bsonType: "string" },
+              cid: { bsonType: "string" },
+              author: { bsonType: "string" },
+              indexedAt: { bsonType: "date" },
+              // Add other fields as needed
+            }
+          }
+        },
+        validationLevel: "moderate"
+      });
+      console.log("Post collection validator updated successfully", result);
+    } catch (error) {
+      console.error("Error updating post collection validator:", error);
+    }
   }
 }
 
