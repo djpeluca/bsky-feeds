@@ -37,8 +37,44 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
 export class manager extends AlgoManager {
   public name: string = shortname
 
+  public matchTerms: string[] = [
+    '🇺🇾',
+    '#Uruguay',
+    'URUGUAY',
+    'uruguay',
+    'Uruguay',
+    'Uruguai',
+    'Uruguaya',
+    'Uruguayo',
+    'Uruguayas',
+    'Uruguayos',
+    'uruguayo',
+    'uruguaya',
+    'Uruguayan',
+    'uruguayan',
+    'Uruguayans',
+    'Montevideo',
+    'montevideo',
+    'Montevideano',
+    'Montevideana',
+    'montevideano',
+    'montevideana',
+    'Charrua',
+    'Charrúa',
+    'charrua',
+    'punta del este',
+    'Punta del Este',
+    'paysandu',
+    'Paysandú',
+    'Artigas',
+    'yorugua',
+    'U R U G U A Y'
+  ]
+
   public matchPatterns: RegExp[] = [
-    /(?!uruguaiana)(?:urugua|uruguash|montevid|charrua|🇺🇾|punta del este|yorugua|U R U G U A Y|eleccionesuy|udelar|Jose Mujica|José Mujica|Pepe Mujica|Carolina Cosse|Yamandu Orsi|Yamandú Orsi|Álvaro Delgado|Alvaro Delgado|Batlle|Lacalle Pou|peñarol|Parque Rodó|Parque Rodo|chivito|)\w*/gi,
+    /(^|[\s\W])Uruguay($|[\W\s])/im,
+    /(^|[\s\W])Montevideo($|[\W\s])/im,
+    /(?!uruguaiana)(?:urugua|uruguash|montevid|charrua|🇺🇾|punta del este|yorugua|U R U G U A Y|eleccionesuy|udelar|Jose Mujica|José Mujica|Pepe Mujica|Carolina Cosse|Yamandu Orsi|Yamandú Orsi|Álvaro Delgado|Alvaro Delgado|Batlle|Lacalle Pou|peñarol|Parque Rodó|Parque Rodo|chivito)\w*/gi,
   ]
 
   // Include Uruguayan users here to always include their posts
@@ -84,6 +120,12 @@ export class manager extends AlgoManager {
       }
     })
 
+    this.matchTerms.forEach((term) => {
+      if (matchString.match(term) !== null) {
+        match = true
+      }
+    })
+
     this.matchUsers.forEach((user) => {
       if (matchString.match(user) !== null) {
         match = true
@@ -94,11 +136,11 @@ export class manager extends AlgoManager {
     // const details = await getUserDetails(post.author, this.agent)
     // matchDescription = `${details.description} ${details.displayName}`.replace('\n', ' ')
 
-   // this.matchPatterns.forEach((pattern) => {
-   //   if (matchDescription.match(pattern) !== null) {
-   //     match = true
-   //   }
-   // })
+    this.matchTerms.forEach((term) => {
+      if (matchDescription.match(term) !== null) {
+        match = true
+      }
+    })
 
     return match
   }
