@@ -94,11 +94,11 @@ export class manager extends AlgoManager {
     // const details = await getUserDetails(post.author, this.agent)
     // matchDescription = `${details.description} ${details.displayName}`.replace('\n', ' ')
 
-    this.matchPatterns.forEach((pattern) => {
-      if (matchDescription.match(pattern) !== null) {
-        match = true
-      }
-    })
+   // this.matchPatterns.forEach((pattern) => {
+   //   if (matchDescription.match(pattern) !== null) {
+   //     match = true
+   //   }
+   // })
 
     return match
   }
