@@ -66,10 +66,10 @@
     multiformats "^9.9.0"
     zod "^3.23.8"
 
-"@atproto/repo@^0.4.3":
-  version "0.4.3"
-  resolved "https://registry.yarnpkg.com/@atproto/repo/-/repo-0.4.3.tgz#855083c81972e19a096313da9bee0bfd722839b5"
-  integrity sha512-9w4TlyxExLfFL9BysvXq4vhIsYsnmGi0uelmxJjlRXBICgLpqjqQVqhS8OBqE25ZTYvgXUi7nNqpo2llCHhOvQ==
+"@atproto/repo@^0.5.0":
+  version "0.5.0"
+  resolved "https://registry.yarnpkg.com/@atproto/repo/-/repo-0.5.0.tgz#ab7aa44f279ca00b03cd28246d1b559a6cd0bff3"
+  integrity sha512-kZbj4wW5eFrDjkSTS9z+6bT4OTr5K4GrqWukWbfdBJtZPXsRDm75AV0C9ItoHDTdbBXn65TK6kqaJTrf89osCg==
   dependencies:
     "@atproto/common" "^0.4.1"
     "@atproto/common-web" "^0.3.0"
