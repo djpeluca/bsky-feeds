@@ -29,7 +29,13 @@ export abstract class FirehoseSubscriptionBase {
             value,
           )
         } catch (err) {
+          if (err instanceof Error && err.message.includes("Message must have the property \"blocks\"")) {
+            this.invalidMessageCount++;
+            console.warn(`Skipping invalid message (count: ${this.invalidMessageCount}):`, err.message)
+            return null // Return null for invalid messages
+          }
           console.error('repo subscription skipped invalid message', err)
+          return null // Return null for other validation errors
         }
       },
     })
@@ -41,24 +47,15 @@ export abstract class FirehoseSubscriptionBase {
     while (true) {
       try {
         for await (const evt of this.sub) {
+          if (evt === null) continue; // Skip null events (invalid messages)
           try {
             await this.handleEvent(evt)
           } catch (err) {
-            if (err instanceof Error && err.message.includes("Message must have the property \"blocks\"")) {
-              this.invalidMessageCount++;
-              console.warn(`Skipping invalid message (count: ${this.invalidMessageCount}):`, err.message)
-              continue
-            }
             console.error('Error processing event:', err)
           }
         }
       } catch (err) {
-        if (err instanceof Error && err.message.includes("Message must have the property \"blocks\"")) {
-          this.invalidMessageCount++;
-          console.warn(`Skipped invalid message in subscription (count: ${this.invalidMessageCount}):`, err.message)
-        } else {
-          console.error('Subscription error:', err)
-        }
+        console.error('Subscription error:', err)
       }
       
       console.log(`Reconnecting in ${reconnectDelay}ms... (Total invalid messages: ${this.invalidMessageCount})`)
