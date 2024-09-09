@@ -15,6 +15,7 @@ import { Database } from '../db'
 
 export abstract class FirehoseSubscriptionBase {
   public sub: Subscription<RepoEvent>
+  private invalidMessageCount = 0;
 
   constructor(public db: Database, public service: string) {
     this.sub = new Subscription({
@@ -44,17 +45,23 @@ export abstract class FirehoseSubscriptionBase {
             await this.handleEvent(evt)
           } catch (err) {
             if (err instanceof Error && err.message.includes("Message must have the property \"blocks\"")) {
-              console.warn("Skipping invalid message:", err.message)
+              this.invalidMessageCount++;
+              console.warn(`Skipping invalid message (count: ${this.invalidMessageCount}):`, err.message)
               continue
             }
             console.error('Error processing event:', err)
           }
         }
       } catch (err) {
-        console.error('Subscription error:', err)
+        if (err instanceof Error && err.message.includes("Message must have the property \"blocks\"")) {
+          this.invalidMessageCount++;
+          console.warn(`Skipped invalid message in subscription (count: ${this.invalidMessageCount}):`, err.message)
+        } else {
+          console.error('Subscription error:', err)
+        }
       }
       
-      console.log(`Reconnecting in ${reconnectDelay}ms...`)
+      console.log(`Reconnecting in ${reconnectDelay}ms... (Total invalid messages: ${this.invalidMessageCount})`)
       await new Promise(resolve => setTimeout(resolve, reconnectDelay))
     }
   }
