@@ -84,12 +84,6 @@ export class manager extends AlgoManager {
       }
     })
 
-    this.matchTerms.forEach((term) => {
-      if (matchString.match(term) !== null) {
-        match = true
-      }
-    })
-
     this.matchUsers.forEach((user) => {
       if (matchString.match(user) !== null) {
         match = true
@@ -100,8 +94,8 @@ export class manager extends AlgoManager {
     // const details = await getUserDetails(post.author, this.agent)
     // matchDescription = `${details.description} ${details.displayName}`.replace('\n', ' ')
 
-    this.matchTerms.forEach((term) => {
-      if (matchDescription.match(term) !== null) {
+    this.matchPatterns.forEach((pattern) => {
+      if (matchDescription.match(pattern) !== null) {
         match = true
       }
     })
