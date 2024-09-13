@@ -116,18 +116,24 @@ export class manager extends AlgoManager {
 
     this.matchPatterns.forEach((pattern) => {
       if (matchString.match(pattern) !== null) {
+        console.log(`Matched pattern: ${pattern}`)
+        console.log(`Matched text: ${post.text}`)
         match = true
       }
     })
 
     this.matchTerms.forEach((term) => {
       if (matchString.match(term) !== null) {
+        console.log(`Matched term: ${term}`)
+        console.log(`Matched text: ${post.text}`)
         match = true
       }
     })
 
     this.matchUsers.forEach((user) => {
       if (matchString.match(user) !== null) {
+        console.log(`Matched user: ${user}`)
+        console.log(`Matched text: ${post.text}`)
         match = true
       }
     })
@@ -138,9 +144,15 @@ export class manager extends AlgoManager {
 
     this.matchTerms.forEach((term) => {
       if (matchDescription.match(term) !== null) {
+        console.log(`Matched term in description: ${term}`)
+        console.log(`Matched description: ${matchDescription}`)
         match = true
       }
     })
+
+    if (match) {
+      console.log(`Post matched criteria for Uruguay feed. URI: ${post.uri}`)
+    }
 
     return match
   }
