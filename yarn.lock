@@ -25,10 +25,10 @@
     uint8arrays "3.0.0"
     zod "^3.21.4"
 
-"@atproto/common@^0.4.1":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@atproto/common/-/common-0.4.1.tgz#ca6fce47001ce8d031acd3fb4942fbfd81f72c43"
-  integrity sha512-uL7kQIcBTbvkBDNfxMXL6lBH4fO2DQpHd2BryJxMtbw/4iEPKe9xBYApwECHhEIk9+zhhpTRZ15FJ3gxTXN82Q==
+"@atproto/common@^0.4.1", "@atproto/common@^0.4.2":
+  version "0.4.2"
+  resolved "https://registry.yarnpkg.com/@atproto/common/-/common-0.4.2.tgz#5e8aea74042391ffa7b2480cd0bc0ea67215d375"
+  integrity sha512-tv9lHjaoXW7CQrXUiu81RJZJ/bgcPSMaXrrgN4DxS08Z97hor0jgxThlwmGny1p6ksTZ5/bCX9GeJqi/b4LDCg==
   dependencies:
     "@atproto/common-web" "^0.3.0"
     "@ipld/dag-cbor" "^7.0.3"
@@ -66,12 +66,12 @@
     multiformats "^9.9.0"
     zod "^3.23.8"
 
-"@atproto/repo@^0.5.0":
-  version "0.5.0"
-  resolved "https://registry.yarnpkg.com/@atproto/repo/-/repo-0.5.0.tgz#ab7aa44f279ca00b03cd28246d1b559a6cd0bff3"
-  integrity sha512-kZbj4wW5eFrDjkSTS9z+6bT4OTr5K4GrqWukWbfdBJtZPXsRDm75AV0C9ItoHDTdbBXn65TK6kqaJTrf89osCg==
+"@atproto/repo@^0.5.1":
+  version "0.5.1"
+  resolved "https://registry.yarnpkg.com/@atproto/repo/-/repo-0.5.1.tgz#8e8b7efb35217e84843e804bcd06c3c409228095"
+  integrity sha512-/asnjlqoDiJrKnBGsv9Xg4sUMKK0YsaLBMt6AepWfwrXTTfHPLY7QxyyFMxxuzQQtLyYaj4lIn5zhmNz7TXf0w==
   dependencies:
-    "@atproto/common" "^0.4.1"
+    "@atproto/common" "^0.4.2"
     "@atproto/common-web" "^0.3.0"
     "@atproto/crypto" "^0.4.1"
     "@atproto/lexicon" "^0.4.1"
