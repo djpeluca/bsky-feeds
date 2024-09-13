@@ -115,10 +115,8 @@ export class manager extends AlgoManager {
     }
 
     matchString = `${post.text} ${matchString}`.replace('\n', ' ')
-    console.log('Match string:', matchString);
 
     this.matchPatterns.forEach((pattern) => {
-      console.log('Checking pattern:', pattern);
       if (matchString.match(pattern) !== null) {
         console.log(`Matched pattern: ${pattern}`);
         console.log(`Matched text: ${post.text}`);
