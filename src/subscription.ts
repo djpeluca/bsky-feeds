@@ -123,15 +123,16 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
       }
 
       if (postsToCreate.length > 0) {
-        postsToCreate.forEach(async (to_insert) => {
+        for (const to_insert of postsToCreate) {
           try {
-            await this.db.replaceOneURI('post', to_insert.uri, to_insert)
+            const result = await this.db.replaceOneURI('post', to_insert.uri, to_insert)
+            console.log(`Replace result for URI ${to_insert.uri}:`, result)
           } catch (error) {
             console.error(`Error replacing/inserting post with URI: ${to_insert.uri}`)
             console.error(`Error details:`, error)
             console.error(`Post data that failed to insert:`, JSON.stringify(to_insert, null, 2))
           }
-        })
+        }
       }
     } catch (error) {
       if (error instanceof Error && error.message.includes("Message must have the property \"blocks\"")) {
