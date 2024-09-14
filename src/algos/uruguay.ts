@@ -95,7 +95,6 @@ export class manager extends AlgoManager {
   }*/
 
   public async filter_post(post: Post): Promise<Boolean> {
-    console.log('Processing post:', post.text.substring(0, 100) + '...'); // Log the first 100 characters of each post
 
     if (this.agent === null) {
       await this.start()
@@ -134,8 +133,6 @@ export class manager extends AlgoManager {
 
     this.matchUsers.forEach((user) => {
       if (matchString.match(user) !== null) {
-        console.log(`Matched user: ${user}`);
-        console.log(`Matched text: ${post.text}`);
         match = true;
       }
     })

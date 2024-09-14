@@ -39,13 +39,17 @@ class dbSingleton {
   }
 
   async replaceOneURI(collection: string, uri: string, data: any) {
+    console.log(`Attempting to insert/update document for URI: ${uri} in collection: ${collection}`);
+    console.log(`AlgoFeed: ${data.algoTags ? data.algoTags.join(', ') : 'Not specified'}`);
+
     if (!(typeof data._id === typeof '')) {
-      data._id = new ObjectId()
+      data._id = new ObjectId();
     } else {
-      data._id = new ObjectId(data._id)
+      data._id = new ObjectId(data._id);
     }
 
     try {
+
       const result = await this.client
         ?.db()
         .collection(collection)
@@ -68,7 +72,7 @@ class dbSingleton {
   async replaceOneDID(collection: string, did: string, data: any) {
     if (!(typeof data._id === typeof '')) data._id = new ObjectId()
     else {
-      data._id = new ObjectId(data._id)
+      data._id = new ObjectId(data._id);
     }
 
     try {
