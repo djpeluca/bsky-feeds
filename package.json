@@ -31,7 +31,7 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@atproto/api": "^0.13.6",
+    "@atproto/api": "^0.13.7",
     "@atproto/identity": "^0.4.1",
     "@atproto/lexicon": "^0.4.1",
     "@atproto/repo": "^0.5.1",
