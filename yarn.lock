@@ -25,12 +25,22 @@
     uint8arrays "3.0.0"
     zod "^3.21.4"
 
-"@atproto/common@^0.4.1", "@atproto/common@^0.4.2":
-  version "0.4.2"
-  resolved "https://registry.yarnpkg.com/@atproto/common/-/common-0.4.2.tgz#5e8aea74042391ffa7b2480cd0bc0ea67215d375"
-  integrity sha512-tv9lHjaoXW7CQrXUiu81RJZJ/bgcPSMaXrrgN4DxS08Z97hor0jgxThlwmGny1p6ksTZ5/bCX9GeJqi/b4LDCg==
+"@atproto/common-web@^0.3.1":
+  version "0.3.1"
+  resolved "https://registry.yarnpkg.com/@atproto/common-web/-/common-web-0.3.1.tgz#86f8efb10a4b9073839cee914c6c08a664917cc4"
+  integrity sha512-N7wiTnus5vAr+lT//0y8m/FaHHLJ9LpGuEwkwDAeV3LCiPif4m/FS8x/QOYrx1PdZQwKso95RAPzCGWQBH5j6Q==
   dependencies:
-    "@atproto/common-web" "^0.3.0"
+    graphemer "^1.4.0"
+    multiformats "^9.9.0"
+    uint8arrays "3.0.0"
+    zod "^3.23.8"
+
+"@atproto/common@^0.4.2", "@atproto/common@^0.4.3":
+  version "0.4.3"
+  resolved "https://registry.yarnpkg.com/@atproto/common/-/common-0.4.3.tgz#c869c95400b1a3d82f7775d50fe548dcd2db608f"
+  integrity sha512-CTgH3CEsWKwoj/bTsGpQaKS14qaelWGR8kInFfZNLbyNm1rCTFHzQqH5NJBxSL+dq2FHeelcDgrov9HCEuoaQw==
+  dependencies:
+    "@atproto/common-web" "^0.3.1"
     "@ipld/dag-cbor" "^7.0.3"
     cbor-x "^1.5.1"
     iso-datestring-validator "^2.2.2"
@@ -55,12 +65,12 @@
     "@atproto/crypto" "^0.4.1"
     axios "^0.27.2"
 
-"@atproto/lexicon@^0.4.1":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@atproto/lexicon/-/lexicon-0.4.1.tgz#19155210570a2fafbcc7d4f655d9b813948e72a0"
-  integrity sha512-bzyr+/VHXLQWbumViX5L7h1NKQObfs8Z+XZJl43OUK8nYFUI4e/sW1IZKRNfw7Wvi5YVNK+J+yP3DWIBZhkCYA==
+"@atproto/lexicon@^0.4.1", "@atproto/lexicon@^0.4.2":
+  version "0.4.2"
+  resolved "https://registry.yarnpkg.com/@atproto/lexicon/-/lexicon-0.4.2.tgz#fcc92cdb82ae248b034b172763d6dbadfb00a829"
+  integrity sha512-CXoOkhcdF3XVUnR2oNgCs2ljWfo/8zUjxL5RIhJW/UNLp/FSl+KpF8Jm5fbk8Y/XXVPGRAsv9OYfxyU/14N/pw==
   dependencies:
-    "@atproto/common-web" "^0.3.0"
+    "@atproto/common-web" "^0.3.1"
     "@atproto/syntax" "^0.3.0"
     iso-datestring-validator "^2.2.2"
     multiformats "^9.9.0"
@@ -86,15 +96,15 @@
   resolved "https://registry.yarnpkg.com/@atproto/syntax/-/syntax-0.3.0.tgz#fafa2dbea9add37253005cb663e7373e05e618b3"
   integrity sha512-Weq0ZBxffGHDXHl9U7BQc2BFJi/e23AL+k+i5+D9hUq/bzT4yjGsrCejkjq0xt82xXDjmhhvQSZ0LqxyZ5woxA==
 
-"@atproto/xrpc-server@^0.6.3":
-  version "0.6.3"
-  resolved "https://registry.yarnpkg.com/@atproto/xrpc-server/-/xrpc-server-0.6.3.tgz#779f5eb53745a94fe816a919febf52fc2638ddfc"
-  integrity sha512-0YXeBM9NjiIlR5eXWo8qzArRcBOKhwVimpH+ajKgZzlncPO53brVZ9+3BUnD5J1PG8mEQFRERi+Jt77QyF89qA==
+"@atproto/xrpc-server@^0.7.0":
+  version "0.7.0"
+  resolved "https://registry.yarnpkg.com/@atproto/xrpc-server/-/xrpc-server-0.7.0.tgz#e8a5e881839270a89aae25fe8dd0d5ceffaa59e2"
+  integrity sha512-xtsn2Ldu9bnchCgxtmSVDxUKBQ1GzkawWypEb7iMHpbILC2anA7mnTyF0zXg9VVb7vnVRFcSbiiCYiFNx3exsw==
   dependencies:
-    "@atproto/common" "^0.4.1"
+    "@atproto/common" "^0.4.3"
     "@atproto/crypto" "^0.4.1"
-    "@atproto/lexicon" "^0.4.1"
-    "@atproto/xrpc" "^0.6.1"
+    "@atproto/lexicon" "^0.4.2"
+    "@atproto/xrpc" "^0.6.3"
     cbor-x "^1.5.1"
     express "^4.17.2"
     http-errors "^2.0.0"
@@ -104,12 +114,12 @@
     ws "^8.12.0"
     zod "^3.23.8"
 
-"@atproto/xrpc@^0.6.1":
-  version "0.6.1"
-  resolved "https://registry.yarnpkg.com/@atproto/xrpc/-/xrpc-0.6.1.tgz#dcd1315c8c60eef5af2db7fa4e35a38ebc6d79d5"
-  integrity sha512-Zy5ydXEdk6sY7FDUZcEVfCL1jvbL4tXu5CcdPqbEaW6LQtk9GLds/DK1bCX9kswTGaBC88EMuqQMfkxOhp2t4A==
+"@atproto/xrpc@^0.6.1", "@atproto/xrpc@^0.6.3":
+  version "0.6.3"
+  resolved "https://registry.yarnpkg.com/@atproto/xrpc/-/xrpc-0.6.3.tgz#5942fc24644ad182b913af526efaa06a43d89478"
+  integrity sha512-S3tRvOdA9amPkKLll3rc4vphlDitLrkN5TwWh5Tu/jzk7mnobVVE3akYgICV9XCNHKjWM+IAPxFFI2qi+VW6nQ==
   dependencies:
-    "@atproto/lexicon" "^0.4.1"
+    "@atproto/lexicon" "^0.4.2"
     zod "^3.23.8"
 
 "@cbor-extract/cbor-extract-darwin-arm64@2.1.1":
