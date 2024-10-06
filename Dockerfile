@@ -20,6 +20,7 @@ COPY --from=deps /app/yarn.lock .
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/src/lexicon ./src/lexicon
 COPY --from=build /app/scripts ./scripts
+COPY --from=build /app/images ./images
 RUN yarn global add tsx
 
 EXPOSE 3000
