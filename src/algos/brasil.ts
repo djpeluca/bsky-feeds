@@ -106,12 +106,12 @@ export class manager extends AlgoManager {
     //
   ]
 
-  /*public async periodicTask() {
+  public async periodicTask() {
     await this.db.removeTagFromOldPosts(
       this.name,
       new Date().getTime() - 7 * 24 * 60 * 60 * 1000,
     )
-  }*/
+  }
 
   public async filter_post(post: Post): Promise<Boolean> {
     if (this.agent === null) {
