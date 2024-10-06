@@ -19,7 +19,7 @@ COPY --from=build /app/dist ./dist
 COPY --from=deps /app/package.json .
 COPY --from=deps /app/yarn.lock .
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/scripts ./scripts
+COPY --from=build /app/scripts ./scripts
 
 EXPOSE 3000
 CMD ["yarn","start"]
