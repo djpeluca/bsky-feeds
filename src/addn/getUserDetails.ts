@@ -1,4 +1,4 @@
-import { Agent } from '@atproto/api'
+import { BskyAgent } from '@atproto/api'
 import resolveHandleToDID from './resolveHandleToDID'
 import moize from 'moize'
 
@@ -19,7 +19,7 @@ let resolvers: Resolver[] = []
 let isBatchExecutionInProgress = false
 let maxRequestChunk = 25
 
-const executeBatch = async (agent: Agent) => {
+const executeBatch = async (agent: BskyAgent) => {
   const currentBatch = batch
   const currentResolvers = resolvers
 
@@ -68,7 +68,7 @@ const executeBatch = async (agent: Agent) => {
 
 export const _getUserDetails = async (
   user: string,
-  agent: Agent,
+  agent: BskyAgent,
 ): Promise<ProfileViewDetailed> => {
   let user_did = ''
 
