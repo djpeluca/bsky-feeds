@@ -18,7 +18,7 @@ COPY --from=build /app/dist ./dist
 COPY --from=deps /app/package.json .
 COPY --from=deps /app/yarn.lock .
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=build /app/lexicon ./lexicon
+COPY --from=build /app/src/lexicon ./src/lexicon
 COPY --from=build /app/scripts ./scripts
 RUN yarn global add tsx
 
