@@ -2,7 +2,6 @@ import { InvalidRequestError } from '@atproto/xrpc-server'
 import { Server } from '../lexicon'
 import { AppContext } from '../config'
 import algos from '../algos'
-import { validateAuth } from '../auth'
 import { AtUri } from '@atproto/syntax'
 import moize from 'moize'
 
@@ -46,6 +45,7 @@ export default function (server: Server, ctx: AppContext) {
 
     const body = await algoHandlerMoized(ctx, params)
     if (body.feed.length < params.limit) body.cursor = undefined
+
     return {
       encoding: 'application/json',
       body: body,

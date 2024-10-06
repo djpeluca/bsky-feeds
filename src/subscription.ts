@@ -12,9 +12,7 @@ import { Database } from './db'
 
 import crypto from 'crypto'
 import { Post } from './db/schema'
-
-import { AtpAgent } from '@atproto/api'
-
+import { BskyAgent } from '@atproto/api'
 
 export class FirehoseSubscription extends FirehoseSubscriptionBase {
   public algoManagers: any[]
@@ -24,28 +22,27 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
 
     this.algoManagers = []
 
-    const agent = new AtpAgent({ service: 'https://bsky.social' })
-
+    const agent = new BskyAgent({ service: 'https://api.bsky.app' })
 
     dotenv.config()
     const handle = `${process.env.FEEDGEN_HANDLE}`
     const password = `${process.env.FEEDGEN_PASSWORD}`
 
-    agent.login({ identifier: handle, password: password }).then(async () => {
-      batchUpdate(agent, 5 * 60 * 1000)
+    //agent.login({ identifier: handle, password: password }).then(async () => {
+    batchUpdate(agent, 5 * 60 * 1000)
 
-      Object.keys(algos).forEach((algo) => {
-        this.algoManagers.push(new algos[algo].manager(db, agent))
-      })
-
-      const startPromises = this.algoManagers.map(async (algo) => {
-        if (await algo._start()) {
-          console.log(`${algo.name}: Started`)
-        }
-      })
-
-      await Promise.all(startPromises)
+    Object.keys(algos).forEach((algo) => {
+      this.algoManagers.push(new algos[algo].manager(db, agent))
     })
+
+    const startPromises = this.algoManagers.map(async (algo) => {
+      if (await algo._start()) {
+        console.log(`${algo.name}: Started`)
+      }
+    })
+
+    /*await */ Promise.all(startPromises)
+    //})
   }
 
   public authorList: string[]
@@ -56,14 +53,13 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
 
     await Promise.all(this.algoManagers.map((manager) => manager.ready()))
 
-    const ops = await (async () => {
-      try {
-        return await getOpsByType(evt)
-      } catch (e) {
-        console.log(`core: error decoding ops ${e.message}`)
-        return undefined
-      }
-    })()
+    let ops: any
+    try {
+      ops = await getOpsByType(evt)
+    } catch (e) {
+      console.log(`core: error decoding ops ${e.message}`)
+      return
+    }
 
     if (!ops) return
 
@@ -117,15 +113,20 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
       (post) => post !== null,
     )
 
+    const dbOperations: Promise<any>[] = []
+
     if (postsToDelete.length > 0) {
-      await this.db.deleteManyURI('post', postsToDelete)
+      dbOperations.push(this.db.deleteManyURI('post', postsToDelete))
     }
 
     if (postsToCreate.length > 0) {
       postsToCreate.forEach(async (to_insert) => {
         if (to_insert)
-          await this.db.replaceOneURI('post', to_insert.uri, to_insert)
+          dbOperations.push(
+            this.db.replaceOneURI('post', to_insert.uri, to_insert),
+          )
       })
     }
+    await Promise.all(dbOperations)
   }
 }

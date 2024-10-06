@@ -27,23 +27,22 @@ const executeBatch = async (agent: Agent) => {
   resolvers = []
 
   try {
-    let res: any
     let resultsMap: { [k: string]: any } = {}
 
+    const promises: Promise<any>[] = []
     for (let i = 0; i < currentBatch.length; i += maxRequestChunk) {
       const chunk = currentBatch.slice(i, i + maxRequestChunk)
-
-      try {
-        res = await limit(() =>
+      promises.push(
+        limit(() =>
           agent.app.bsky.actor.getProfiles({
             actors: chunk,
           }),
-        )
-      } catch (error) {
-        console.log(`core: error during getProfiles ${error.message}`)
-        throw error
-      }
+        ),
+      )
+    }
 
+    const responses = await Promise.all(promises)
+    responses.forEach((res) => {
       resultsMap = {
         ...Object.fromEntries(
           res.data.profiles.map((record: ProfileViewDetailed) => [
@@ -53,7 +52,8 @@ const executeBatch = async (agent: Agent) => {
         ),
         ...resultsMap,
       }
-    }
+    })
+
     currentResolvers.forEach(({ resolve, user_did }) => {
       resolve(resultsMap[user_did])
     })
@@ -92,16 +92,33 @@ export const _getUserDetails = async (
           isBatchExecutionInProgress = true
           executeBatch(agent)
         }
-      }, 1000)
+      }, 500)
     }
   })
 }
 
-const getUserDetails = moize(_getUserDetails, {
-  isPromise: true,
-  maxAge: 1000 * 60 * 60 * 3, // three hours
-  updateExpire: true,
-  isShallowEqual: true,
-})
+const userDetailsMap = new Map<string, ProfileViewDetailed>()
+const userExpiryMap = new Map<string, number>()
+const expiryTime = 1000 * 60 * 60 * 3
+
+const getUserDetails = async (
+  user: string,
+  agent: BskyAgent,
+): Promise<ProfileViewDetailed> => {
+  const now = Date.now()
+  const expiry = userExpiryMap.get(user)
+
+  const isValid = expiry && expiry > now
+
+  if (isValid && userDetailsMap.has(user)) {
+    return userDetailsMap.get(user)!
+  }
+
+  userExpiryMap.delete(user)
+  const userDetails = await _getUserDetails(user, agent)
+  userDetailsMap.set(user, userDetails)
+  userExpiryMap.set(user, Date.now() + expiryTime)
+  return userDetails
+}
 
 export default getUserDetails

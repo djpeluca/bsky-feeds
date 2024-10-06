@@ -13,6 +13,33 @@ import {
 } from '../lexicon/types/com/atproto/sync/subscribeRepos'
 import { Database } from '../db'
 
+const includedRecords = new Set(['app.bsky.feed.post'])
+
+class Semaphore {
+  private tasks: (() => void)[] = []
+  private counter: number
+
+  constructor(maxConcurrent: number) {
+    this.counter = maxConcurrent
+  }
+
+  async acquire() {
+    if (this.counter > 0) {
+      this.counter--
+      return
+    }
+    await new Promise<void>((resolve) => this.tasks.push(resolve))
+  }
+
+  release() {
+    this.counter++
+    if (this.tasks.length > 0) {
+      const nextTask = this.tasks.shift()
+      if (nextTask) nextTask()
+    }
+  }
+}
+
 export abstract class FirehoseSubscriptionBase {
   public sub: Subscription<RepoEvent>
 
@@ -22,31 +49,46 @@ export abstract class FirehoseSubscriptionBase {
       method: ids.ComAtprotoSyncSubscribeRepos,
       getParams: () => this.getCursor(),
       validate: (value: unknown) => {
-        try {
-          return lexicons.assertValidXrpcMessage<RepoEvent>(
-            ids.ComAtprotoSyncSubscribeRepos,
-            value,
-          )
-        } catch (err) {
-          console.error('repo subscription skipped invalid message', err)
-        }
+        return value as RepoEvent
       },
+      heartbeatIntervalMs: 30000,
     })
   }
 
   abstract handleEvent(evt: RepoEvent): Promise<void>
 
   async run(subscriptionReconnectDelay: number) {
+    const maxConcurrentEvents = 32
+    const semaphore = new Semaphore(maxConcurrentEvents)
+
+    let handledEvents = 0
     try {
       for await (const evt of this.sub) {
-        try {
-          this.handleEvent(evt) // no longer awaiting this
-        } catch (err) {
-          console.error('repo subscription could not handle message', err)
+        const commit = evt as Commit
+
+        if (Array.isArray(commit.ops) && commit.ops.length > 0) {
+          if (commit.blocks) {
+            const [collection] = commit.ops[0].path.split('/')
+
+            if (includedRecords.has(collection)) {
+              handledEvents++
+              await semaphore.acquire().then(() => {
+                this.handleEvent(evt) // no longer awaiting this
+                  .catch((err) => {
+                    console.log(`err in handleEvent ${err}`)
+                  })
+                  .finally(() => {
+                    semaphore.release()
+                  })
+              })
+            }
+          }
         }
-        // update stored cursor every 20 events or so
-        if (isCommit(evt) && evt.seq % 20 === 0) {
-          await this.updateCursor(evt.seq)
+        // update stored cursor every 1000 events or so
+        if (handledEvents > 1000 && Number.isInteger(commit.seq)) {
+          this.updateCursor(commit.seq).then(() => {
+            handledEvents = 0
+          })
         }
       }
     } catch (err) {
@@ -80,6 +122,8 @@ export const getOpsByType = async (evt: Commit): Promise<OperationsByType> => {
   for (const op of evt.ops) {
     const uri = `at://${evt.repo}/${op.path}`
     const [collection] = op.path.split('/')
+
+    if (!includedRecords.has(collection)) continue
 
     if (op.action === 'update') continue // updates not supported yet
 

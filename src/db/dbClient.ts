@@ -12,11 +12,21 @@ import { InvalidRequestError } from '@atproto/xrpc-server'
 dotenv.config()
 
 class dbSingleton {
+  private static instance: dbSingleton | null = null
   client: MongoClient | null = null
 
   constructor(connection_string: string) {
     this.client = new MongoClient(connection_string, { enableUtf8Validation: false })
     this.init()
+  }
+
+  static getInstance(): dbSingleton {
+    if (dbSingleton.instance === null) {
+      dbSingleton.instance = new dbSingleton(
+        `${process.env.FEEDGEN_MONGODB_CONNECTION_STRING}`,
+      )
+    }
+    return dbSingleton.instance
   }
 
   async init() {
@@ -174,7 +184,7 @@ class dbSingleton {
     tag,
     limit = 50,
     cursor = undefined,
-    imagesOnly = false,
+    mediaOnly = false,
     nsfwOnly = false,
     excludeNSFW = false,
     sortOrder = -1,
@@ -182,29 +192,42 @@ class dbSingleton {
     tag: string
     limit?: number
     cursor?: string | undefined
-    imagesOnly?: Boolean
-    nsfwOnly?: Boolean
-    excludeNSFW?: Boolean
+    mediaOnly?: boolean
+    nsfwOnly?: boolean
+    excludeNSFW?: boolean
     sortOrder?: SortDirection
   }) {
-    let query: { indexedAt?: any; cid?: any; algoTags: string } = {
-      algoTags: tag,
-    }
+    let query: { indexedAt?: any; cid?: any; algoTags: string; $and?: any[] } =
+      {
+        algoTags: tag,
+      }
 
-    if (imagesOnly) {
-      query['embed.images'] = { $ne: null }
+    const conditions: any[] = []
+
+    if (mediaOnly) {
+      conditions.push({
+        $or: [
+          { 'embed.images': { $ne: null } },
+          { 'embed.video': { $ne: null } },
+          { 'embed.media': { $ne: null } },
+        ],
+      })
     }
     if (nsfwOnly) {
-      query['labels'] = {
-        $in: ['porn', 'nudity', 'sexual', 'underwear'],
-        $ne: null,
-      }
+      conditions.push({
+        labels: {
+          $in: ['porn', 'nudity', 'sexual', 'underwear'],
+          $ne: null,
+        },
+      })
     }
     if (excludeNSFW) {
-      query['labels'] = {
-        $nin: ['porn', 'nudity', 'sexual', 'underwear'],
-        $ne: null,
-      }
+      conditions.push({
+        labels: {
+          $nin: ['porn', 'nudity', 'sexual', 'underwear'],
+          $ne: null,
+        },
+      })
     }
 
     if (cursor !== undefined) {
@@ -216,6 +239,10 @@ class dbSingleton {
 
       query['indexedAt'] = { $lte: timeStr }
       query['cid'] = { $ne: cid }
+    }
+
+    if (conditions.length > 0) {
+      query.$and = conditions
     }
 
     const results = this.client
@@ -245,12 +272,16 @@ class dbSingleton {
     else return results
   }
 
-  async getUnlabelledPostsWithImages(limit = 100, lagTime = 5 * 60 * 1000) {
+  async getUnlabelledPostsWithMedia(limit = 100, lagTime = 5 * 60 * 1000) {
     const results = this.client
       ?.db()
       .collection('post')
       .find({
-        'embed.images': { $ne: null },
+        $or: [
+          { 'embed.images': { $ne: null } },
+          { 'embed.video': { $ne: null } },
+          { 'embed.media': { $ne: null } },
+        ],
         labels: null,
         indexedAt: { $lt: new Date().getTime() - lagTime },
       })
@@ -332,8 +363,6 @@ class dbSingleton {
   }
 }
 
-const dbClient = new dbSingleton(
-  `${process.env.FEEDGEN_MONGODB_CONNECTION_STRING}`,
-)
+const dbClient = dbSingleton.getInstance()
 
 export default dbClient
