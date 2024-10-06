@@ -129,6 +129,5 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
       })
     }
     await Promise.all(dbOperations)
-    }
   }
 }
