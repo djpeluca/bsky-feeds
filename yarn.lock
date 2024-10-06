@@ -3,6 +3,7 @@
 
 
 "@atproto/api@^0.13.5":
+
   version "0.13.6"
   resolved "https://registry.yarnpkg.com/@atproto/api/-/api-0.13.6.tgz#2500e9d7143e6718089632300c42ce50149f8cd5"
   integrity sha512-58emFFZhqY8nVWD3xFWK0yYqAmJ2un+NaTtZxBbRo00mGq1rz9VXTpVmfoHFcuXL1hoDQN3WyJfsub8r6xGOgg==
@@ -70,8 +71,9 @@
   version "0.5.0"
   resolved "https://registry.yarnpkg.com/@atproto/repo/-/repo-0.5.0.tgz#ab7aa44f279ca00b03cd28246d1b559a6cd0bff3"
   integrity sha512-kZbj4wW5eFrDjkSTS9z+6bT4OTr5K4GrqWukWbfdBJtZPXsRDm75AV0C9ItoHDTdbBXn65TK6kqaJTrf89osCg==
+
   dependencies:
-    "@atproto/common" "^0.4.1"
+    "@atproto/common" "^0.4.2"
     "@atproto/common-web" "^0.3.0"
     "@atproto/crypto" "^0.4.1"
     "@atproto/lexicon" "^0.4.1"
@@ -371,10 +373,12 @@
   dependencies:
     undici-types "~6.19.2"
 
+
 "@types/node@^20.11.28":
   version "20.16.5"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-20.16.5.tgz#d43c7f973b32ffdf9aa7bd4f80e1072310fd7a53"
   integrity sha512-VwYCweNo3ERajwy0IUlqqcyZ8/A7Zwa9ZP3MnENWcB11AejO+tLy3pu850goUW2FC/IJMdZUfKpX/yxL1gymCA==
+
   dependencies:
     undici-types "~6.19.2"
 
@@ -822,6 +826,7 @@ follow-redirects@1.15.8, follow-redirects@^1.14.9:
   resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.15.8.tgz#ae67b97ae32e0a7b36066a5448938374ec18d13d"
   integrity sha512-xgrmBhBToVKay1q2Tao5LI26B83UhrB/vM1avwVSDzt8rx3rO6AizBAaF46EgksTVr+rFTQaqZZ9MVBfUe4nig==
 
+
 form-data@^4.0.0:
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/form-data/-/form-data-4.0.0.tgz#93919daeaf361ee529584b9b31664dc12c9fa452"
@@ -1066,6 +1071,7 @@ mongodb@^6.3.0:
   version "6.8.0"
   resolved "https://registry.yarnpkg.com/mongodb/-/mongodb-6.8.0.tgz#680450f113cdea6d2d9f7121fe57cd29111fd2ce"
   integrity sha512-HGQ9NWDle5WvwMnrvUxsFYPd3JEbqD3RgABHBQRuoCEND0qzhsd0iH5ypHsf1eJ+sXmvmyKpP+FLOKY8Il7jMw==
+
   dependencies:
     "@mongodb-js/saslprep" "^1.1.5"
     bson "^6.7.0"
