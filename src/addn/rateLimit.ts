@@ -1,10 +1,10 @@
 import { pRateLimit } from 'p-ratelimit'
 
 const _limit = pRateLimit({
-  interval: 300 * 1000,
-  rate: 2000,
-  concurrency: 10,
-  maxDelay: 30 * 1000,
+  interval: undefined,
+  rate: undefined,
+  concurrency: undefined,
+  maxDelay: undefined,
 })
 
 const limit = async <T>(fn: () => Promise<T>, retries = 3): Promise<T> => {
