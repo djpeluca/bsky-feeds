@@ -32,6 +32,11 @@ class dbSingleton {
   async init() {
     if (this.client === null) throw new Error('DB Cannot be null')
     await this.client.connect()
+    // Example: Add these in your init() method
+    await this.client.db().collection('post').createIndex({ indexedAt: -1, cid: -1 })
+    await this.client.db().collection('post').createIndex({ algoTags: 1 })
+    await this.client.db().collection('post').createIndex({ uri: 1 })
+    await this.client.db().collection('post').createIndex({ author: 1 })
   }
 
   async deleteManyURI(collection: string, uris: string[]) {
@@ -248,7 +253,7 @@ class dbSingleton {
     const results = this.client
       ?.db()
       .collection('post')
-      .find(query)
+      .find(query, { projection: { _id: 1, uri: 1, indexedAt: 1 /* other necessary fields */ } })
       .sort({ indexedAt: sortOrder, cid: -1 })
       .limit(limit)
       .toArray()
