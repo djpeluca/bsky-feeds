@@ -63,7 +63,7 @@ export class manager extends AlgoManager {
     'Charrúa',
     'charrua',
     'punta del este',
-    'Punta del Este',,
+    'Punta del Este',
     'Paysandú',
     'Artigas',
     'yorugua',
