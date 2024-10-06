@@ -105,7 +105,7 @@ export class manager extends AlgoManager {
 
     let matchString = ''
     let matchDescription = ''
-
+    
     if (post.embed?.images) {
       const imagesArr = post.embed.images
       imagesArr.forEach((image) => {
@@ -113,20 +113,31 @@ export class manager extends AlgoManager {
       })
     }
 
+    if (post.embed?.alt) {
+      matchString = `${matchString} ${post.embed.alt}`.replace('\n', ' ')
+    }
+
+    if (post.embed?.media?.alt) {
+      matchString = `${matchString} ${post.embed?.media?.alt}`.replace(
+        '\n',
+        ' ',
+      )
+    }
+
+    if (post.tags) {
+      matchString = `${post.tags.join(' ')} ${matchString}`
+    }
+
     matchString = `${post.text} ${matchString}`.replace('\n', ' ')
 
     this.matchPatterns.forEach((pattern) => {
       if (matchString.match(pattern) !== null) {
-        console.log(`Matched pattern: ${pattern}`);
-        console.log(`Matched text: ${post.text}`);
         match = true;
       }
     });
 
     this.matchTerms.forEach((term) => {
       if (matchString.match(term) !== null) {
-        console.log(`Matched term: ${term}`);
-        console.log(`Matched text: ${post.text}`);
         match = true;
       }
     })

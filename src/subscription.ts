@@ -12,9 +12,7 @@ import { Database } from './db'
 
 import crypto from 'crypto'
 import { Post } from './db/schema'
-
-import { AtpAgent } from '@atproto/api'
-
+import { BskyAgent } from '@atproto/api'
 
 export class FirehoseSubscription extends FirehoseSubscriptionBase {
   public algoManagers: any[]
@@ -24,7 +22,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
 
     this.algoManagers = []
 
-    const agent = new AtpAgent({ service: 'https://api.bsky.app' })
+    const agent = new BskyAgent({ service: 'https://api.bsky.app' })
 
     dotenv.config()
     const handle = `${process.env.FEEDGEN_HANDLE}`
@@ -116,21 +114,19 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
       (post) => post !== null,
     )
 
+    const dbOperations: Promise<any>[] = []
+
     if (postsToDelete.length > 0) {
-      await this.db.deleteManyURI('post', postsToDelete)
+      dbOperations.push(this.db.deleteManyURI('post', postsToDelete))
     }
 
     if (postsToCreate.length > 0) {
-      for (const to_insert of postsToCreate) {
-        try {
-          const result = await this.db.replaceOneURI('post', to_insert.uri, to_insert)
-          console.log(`Replace result for URI ${to_insert.uri}:`, result)
-        } catch (error) {
-          console.error(`Error replacing/inserting post with URI: ${to_insert.uri}`)
-          console.error(`Error details:`, error)
-          console.error(`Post data that failed to insert:`, JSON.stringify(to_insert, null, 2))
-        }
-      }
+      postsToCreate.forEach(async (to_insert) => {
+        if (to_insert)
+          dbOperations.push(
+            this.db.replaceOneURI('post', to_insert.uri, to_insert),
+          )
+      })
     }
     await Promise.all(dbOperations)
   }

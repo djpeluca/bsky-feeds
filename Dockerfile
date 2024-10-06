@@ -1,4 +1,4 @@
-FROM node:22 as build
+FROM node:20 as build
 WORKDIR /app
 COPY ./package.json .
 COPY ./yarn.lock .
@@ -12,6 +12,7 @@ COPY --from=build /app/package.json .
 COPY --from=build /app/yarn.lock .
 RUN yarn install --production
 
+FROM node:20
 WORKDIR /app
 COPY --from=build /app/dist ./dist
 COPY --from=deps /app/package.json .
