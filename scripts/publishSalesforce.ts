@@ -25,7 +25,7 @@ const run = async () => {
 
   // (Optional) A description of your feed
   // Ex: Top trending content from the whole network
-  const description = 'Feed About Salesforce, Salesforce and other keywords will appear here'
+  const description = 'Welcome to the Salesforce Bluesky Feed! Here, you\'ll find the latest updates, insights, and conversations about all things Salesforce and our vibrant community. Dive in to stay connected with Salesforce innovations, industry news, and community highlights—from #SalesforceSaturday to Dreamforce buzz. Join and connect with fellow Trailblazers'
 
   // (Optional) The path to an image to be used as your feed's avatar
   // Ex: ~/path/to/avatar.jpeg
