@@ -207,7 +207,12 @@ class dbSingleton {
     excludeNSFW?: boolean
     sortOrder?: SortDirection
   }) {
-    console.log('Querying posts at:', new Date().getTime());
+    console.log('Feed Query Details:', {
+      tag,
+      limit,
+      cursor,
+      queryTime: new Date().toISOString()
+    });
     let query: { indexedAt?: any; cid?: any; algoTags: string; $and?: any[] } =
       {
         algoTags: tag,
@@ -264,6 +269,9 @@ class dbSingleton {
       .sort({ indexedAt: sortOrder, cid: -1 })
       .limit(limit)
       .toArray()
+
+    console.log('Latest post timestamp:', results[0]?.indexedAt ? 
+      new Date(results[0].indexedAt).toISOString() : 'No posts');
 
     if (results === undefined) return []
     else return results
