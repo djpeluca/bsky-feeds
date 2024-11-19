@@ -262,7 +262,7 @@ class dbSingleton {
       query.$and = conditions
     }
 
-    const results = this.client
+    const results = await this.client
       ?.db()
       .collection('post')
       .find(query, { projection: { _id: 1, uri: 1, indexedAt: 1 /* other necessary fields */ } })
@@ -270,8 +270,10 @@ class dbSingleton {
       .limit(limit)
       .toArray()
 
-    console.log('Latest post timestamp:', results[0]?.indexedAt ? 
-      new Date(results[0].indexedAt).toISOString() : 'No posts');
+    if (results && results.length > 0) {
+      console.log('Latest post timestamp:', results[0].indexedAt ? 
+        new Date(results[0].indexedAt).toISOString() : 'No posts');
+    }
 
     if (results === undefined) return []
     else return results
