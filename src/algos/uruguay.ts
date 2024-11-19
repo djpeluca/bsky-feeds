@@ -157,12 +157,6 @@ export class manager extends AlgoManager {
       }
     })
 
-    console.log('Filter result:', {
-        uri: post.uri,
-        matched: match,
-        timestamp: new Date().toISOString()
-    });
-
     return match
   }
 }
