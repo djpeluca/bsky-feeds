@@ -54,11 +54,6 @@ class dbSingleton {
   }
 
   async replaceOneURI(collection: string, uri: string, data: any) {
-    console.log('Indexing post:', {
-      uri,
-      indexedAt: data.indexedAt,
-      currentTime: new Date().getTime()
-    });
     if (!(typeof data._id === typeof '')) data._id = new ObjectId()
     else {
       data._id = new ObjectId(data._id)
@@ -207,17 +202,10 @@ class dbSingleton {
     excludeNSFW?: boolean
     sortOrder?: SortDirection
   }) {
-    console.log('Feed Query Details:', {
-      tag,
-      limit,
-      cursor,
-      queryTime: new Date().toISOString()
-    });
     let query: { indexedAt?: any; cid?: any; algoTags: string; $and?: any[] } =
       {
         algoTags: tag,
       }
-    console.log('Query:', JSON.stringify(query, null, 2));
 
     const conditions: any[] = []
 
@@ -270,13 +258,7 @@ class dbSingleton {
       .limit(limit)
       .toArray()
 
-    if (results && results.length > 0) {
-      console.log('Latest post timestamp:', results[0].indexedAt ? 
-        new Date(results[0].indexedAt).toISOString() : 'No posts');
-    }
-
-    if (results === undefined) return []
-    else return results
+    return results || []
   }
 
   async getTaggedPostsBetween(tag: string, start: number, end: number) {
