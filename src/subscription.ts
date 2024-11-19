@@ -51,6 +51,12 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
   async handleEvent(evt: RepoEvent) {
     if (!isCommit(evt)) return
 
+    console.log('Firehose event timestamps:', {
+      createdAt: evt.time,
+      processedAt: new Date().toISOString(),
+      uri: evt.ops?.[0]?.path
+    });
+
     await Promise.all(this.algoManagers.map((manager) => manager.ready()))
 
     let ops: any
@@ -65,20 +71,31 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
 
     const postsToDelete = ops.posts.deletes.map((del) => del.uri)
 
-    // Transform posts in parallel
-    const postsCreated = ops.posts.creates.map((create) => ({
-      _id: null,
-      uri: create.uri,
-      cid: create.cid,
-      author: create.author,
-      text: create.record?.text,
-      replyParent: create.record?.reply?.parent.uri ?? null,
-      replyRoot: create.record?.reply?.root.uri ?? null,
-      indexedAt: new Date().getTime(),
-      algoTags: null,
-      embed: create.record?.embed,
-      tags: Array.isArray(create.record?.tags) ? create.record?.tags : [],
-    }))
+    const postsCreated = ops.posts.creates.map((create) => {
+      const post = {
+        _id: null,
+        uri: create.uri,
+        cid: create.cid,
+        author: create.author,
+        text: create.record?.text,
+        replyParent: create.record?.reply?.parent.uri ?? null,
+        replyRoot: create.record?.reply?.root.uri ?? null,
+        indexedAt: new Date().getTime(),
+        createdAt: evt.time, // Add this line to store the original creation time
+        algoTags: null,
+        embed: create.record?.embed,
+        tags: Array.isArray(create.record?.tags) ? create.record?.tags : [],
+      };
+      
+      console.log('Post timestamps:', {
+        createdAt: evt.time,
+        indexedAt: post.indexedAt,
+        processedAt: new Date().toISOString(),
+        uri: create.uri
+      });
+      
+      return post;
+    })
 
     const postsToCreatePromises = postsCreated.map(async (post) => {
       const algoTagsPromises = this.algoManagers.map(async (manager) => {
