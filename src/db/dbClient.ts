@@ -54,6 +54,11 @@ class dbSingleton {
   }
 
   async replaceOneURI(collection: string, uri: string, data: any) {
+    console.log('Indexing post:', {
+      uri,
+      indexedAt: data.indexedAt,
+      currentTime: new Date().getTime()
+    });
     if (!(typeof data._id === typeof '')) data._id = new ObjectId()
     else {
       data._id = new ObjectId(data._id)
@@ -202,10 +207,12 @@ class dbSingleton {
     excludeNSFW?: boolean
     sortOrder?: SortDirection
   }) {
+    console.log('Querying posts at:', new Date().getTime());
     let query: { indexedAt?: any; cid?: any; algoTags: string; $and?: any[] } =
       {
         algoTags: tag,
       }
+    console.log('Query:', JSON.stringify(query, null, 2));
 
     const conditions: any[] = []
 
