@@ -13,7 +13,6 @@ import { Database } from './db'
 import crypto from 'crypto'
 import { Post } from './db/schema'
 import { BskyAgent } from '@atproto/api'
-import { syncRecentPosts } from './addn/syncRecent'
 
 export class FirehoseSubscription extends FirehoseSubscriptionBase {
   public algoManagers: any[]
@@ -43,18 +42,6 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     })
 
     /*await */ Promise.all(startPromises)
-
-    // Add periodic sync every 5 minutes
-    setInterval(() => {
-      syncRecentPosts(this.db, agent, this.algoManagers).catch(err => {
-        console.error('Error in periodic sync:', err)
-      })
-    }, 5 * 60 * 1000)
-
-    // Run initial sync
-    syncRecentPosts(this.db, agent, this.algoManagers).catch(err => {
-      console.error('Error in initial sync:', err)
-    })
     //})
   }
 
@@ -63,18 +50,6 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
 
   async handleEvent(evt: RepoEvent) {
     if (!isCommit(evt)) return
-
-    const maxAgeMs = 60 * 60 * 1000 // 1 hour
-    const eventTime = new Date(evt.time).getTime()
-    const now = new Date().getTime()
-    
-    if (now - eventTime > maxAgeMs) {
-      console.log('Skipping old event:', {
-        createdAt: evt.time,
-        age: Math.round((now - eventTime) / (60 * 60 * 1000)) + ' hours old'
-      });
-      return;
-    }
 
     console.log('Firehose event timestamps:', {
       createdAt: evt.time,
