@@ -29,33 +29,37 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     const handle = `${process.env.FEEDGEN_HANDLE}`
     const password = `${process.env.FEEDGEN_PASSWORD}`
 
-    //agent.login({ identifier: handle, password: password }).then(async () => {
-    batchUpdate(agent, 5 * 60 * 1000)
+    agent.login({ identifier: handle, password: password }).then(async () => {
+        console.log('Successfully logged in as:', handle)
+        
+        batchUpdate(agent, 5 * 60 * 1000)
 
-    Object.keys(algos).forEach((algo) => {
-      this.algoManagers.push(new algos[algo].manager(db, agent))
+        Object.keys(algos).forEach((algo) => {
+            this.algoManagers.push(new algos[algo].manager(db, agent))
+        })
+
+        const startPromises = this.algoManagers.map(async (algo) => {
+            if (await algo._start()) {
+                console.log(`${algo.name}: Started`)
+            }
+        })
+
+        await Promise.all(startPromises)
+
+        // Add periodic sync every 5 minutes
+        setInterval(() => {
+            syncRecentPosts(this.db, agent, this.algoManagers).catch(err => {
+                console.error('Error in periodic sync:', err)
+            })
+        }, 5 * 60 * 1000)
+
+        // Run initial sync
+        syncRecentPosts(this.db, agent, this.algoManagers).catch(err => {
+            console.error('Error in initial sync:', err)
+        })
+    }).catch(err => {
+        console.error('Failed to login:', err)
     })
-
-    const startPromises = this.algoManagers.map(async (algo) => {
-      if (await algo._start()) {
-        console.log(`${algo.name}: Started`)
-      }
-    })
-
-    /*await */ Promise.all(startPromises)
-
-    // Add periodic sync every 5 minutes
-    setInterval(() => {
-      syncRecentPosts(this.db, agent, this.algoManagers).catch(err => {
-        console.error('Error in periodic sync:', err)
-      })
-    }, 5 * 60 * 1000)
-
-    // Run initial sync
-    syncRecentPosts(this.db, agent, this.algoManagers).catch(err => {
-      console.error('Error in initial sync:', err)
-    })
-    //})
   }
 
   public authorList: string[]
