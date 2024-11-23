@@ -73,7 +73,7 @@ export class manager extends AlgoManager {
   public matchPatterns: RegExp[] = [
     /(^|[\s\W])Uruguay($|[\W\s])/im,
     /(^|[\s\W])Montevideo($|[\W\s])/im,
-    /(?!uruguaiana)(?:urugua|uruguash|montevid|charrua|🇺🇾|punta del este|yorugua|U R U G U A Y|eleccionesuy|Jose Mujica|José Mujica|Pepe Mujica|Carolina Cosse|Yamandu Orsi|Yamandú Orsi|Álvaro Delgado|Alvaro Delgado|Batlle|Lacalle Pou|peñarol|Parque Rodó|Parque Rodo|chivito)\w*/,
+    /(?!uruguaiana)(?:urugua|uruguash|montevid|charrua|🇺🇾|punta del este|yorugua|U R U G U A Y|eleccionesuy|Jose Mujica|José Mujica|Pepe Mujica|Carolina Cosse|Yamandu Orsi|Yamandú Orsi|Álvaro Delgado|Blanca Rodriguez|Blanca Rodríguez|Alvaro Delgado|Valeria Ripoll|Lacalle Pou|Batllismo|Willsonismo|Herrerismo|Batllista|Willsonista|herrerista|peñarol|Parque Rodó|Parque Rodo|chivito)\w*/,
     /(^|[\s\W])Colonia del Sacramento($|[\W\s])/im,
     /(^|[\s\W])Cabo Polonio($|[\W\s])/im,
     /(^|[\s\W])Piriápolis($|[\W\s])/im,
