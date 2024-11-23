@@ -1,67 +1,93 @@
-import { Jetstream } from "@skyware/jetstream"
-import { BskyAgent } from '@atproto/api'
-import { Database } from './db'
-import crypto from 'crypto'
+import {
+  OutputSchema as RepoEvent,
+  isCommit,
+} from './lexicon/types/com/atproto/sync/subscribeRepos'
+import { FirehoseSubscriptionBase, getOpsByType } from './util/subscription'
 import dotenv from 'dotenv'
+
 import algos from './algos'
 import batchUpdate from './addn/batchUpdate'
 
-export class StreamSubscription {
-  private db: Database
-  private jetstream: Jetstream
-  public algoManagers: any[]
-  private agent: BskyAgent
+import { Database } from './db'
 
-  constructor(db: Database) {
-    this.db = db
+import crypto from 'crypto'
+import { Post } from './db/schema'
+import { BskyAgent } from '@atproto/api'
+
+export class FirehoseSubscription extends FirehoseSubscriptionBase {
+  public algoManagers: any[]
+
+  constructor(db: Database, subscriptionEndpoint: string) {
+    super(db, subscriptionEndpoint)
+
     this.algoManagers = []
-    this.agent = new BskyAgent({ service: 'https://api.bsky.app' })
-    
-    this.jetstream = new Jetstream({
-      wantedCollections: ["app.bsky.feed.post"], // We only need posts based on original code
-    })
+
+    const agent = new BskyAgent({ service: 'https://api.bsky.app' })
 
     dotenv.config()
-    const handle = process.env.FEEDGEN_HANDLE
-    const password = process.env.FEEDGEN_PASSWORD
+    const handle = `${process.env.FEEDGEN_HANDLE}`
+    const password = `${process.env.FEEDGEN_PASSWORD}`
 
-    // Initialize algo managers
+    //agent.login({ identifier: handle, password: password }).then(async () => {
+    batchUpdate(agent, 5 * 60 * 1000)
+
     Object.keys(algos).forEach((algo) => {
-      this.algoManagers.push(new algos[algo].manager(db, this.agent))
+      this.algoManagers.push(new algos[algo].manager(db, agent))
     })
-  }
 
-  async start() {
-    // Start batch updates
-    batchUpdate(this.agent, 5 * 60 * 1000)
-
-    // Start algo managers
     const startPromises = this.algoManagers.map(async (algo) => {
       if (await algo._start()) {
         console.log(`${algo.name}: Started`)
       }
     })
-    await Promise.all(startPromises)
 
-    // Handle new posts
-    this.jetstream.onCreate("app.bsky.feed.post", async (event) => {
-      await Promise.all(this.algoManagers.map((manager) => manager.ready()))
+    /*await */ Promise.all(startPromises)
+    //})
+  }
 
-      const post = {
-        _id: null,
-        uri: event.commit.cid,
-        cid: event.commit.cid,
-        author: event.did,
-        text: event.commit.record?.['text'] ?? null,
-        replyParent: event.commit.record?.reply?.parent?.uri ?? null,
-        replyRoot: event.commit.record?.reply?.root?.uri ?? null,
-        indexedAt: new Date().getTime(),
-        createdAt: new Date(event.commit.record?.createdAt).getTime(),
-        algoTags: null,
-        embed: event.commit.record?.embed,
-        tags: Array.isArray(event.commit.record?.tags) ? event.commit.record?.tags : [],
-      }
+  public authorList: string[]
+  public intervalId: NodeJS.Timer
 
+  async handleEvent(evt: RepoEvent) {
+    if (!isCommit(evt)) return
+
+    console.log('Firehose event timestamps:', {
+      createdAt: evt.time,
+      processedAt: new Date().toISOString(),
+      uri: evt.ops?.[0]?.path
+    });
+
+    await Promise.all(this.algoManagers.map((manager) => manager.ready()))
+
+    let ops: any
+    try {
+      ops = await getOpsByType(evt)
+    } catch (e) {
+      console.log(`core: error decoding ops ${e.message}`)
+      return
+    }
+
+    if (!ops) return
+
+    const postsToDelete = ops.posts.deletes.map((del) => del.uri)
+
+    // Transform posts in parallel
+    const postsCreated = ops.posts.creates.map((create) => ({
+      _id: null,
+      uri: create.uri,
+      cid: create.cid,
+      author: create.author,
+      text: create.record?.text,
+      replyParent: create.record?.reply?.parent.uri ?? null,
+      replyRoot: create.record?.reply?.root.uri ?? null,
+      indexedAt: new Date().getTime(),
+      createdAt: new Date(create.record?.createdAt).getTime(),
+      algoTags: null,
+      embed: create.record?.embed,
+      tags: Array.isArray(create.record?.tags) ? create.record?.tags : [],
+    }))
+
+    const postsToCreatePromises = postsCreated.map(async (post) => {
       const algoTagsPromises = this.algoManagers.map(async (manager) => {
         try {
           const includeAlgo = await manager.filter_post(post)
@@ -72,8 +98,10 @@ export class StreamSubscription {
         }
       })
 
-      const algoTags = (await Promise.all(algoTagsPromises)).filter(tag => tag !== null)
-      if (algoTags.length === 0) return
+      const algoTagsResults = await Promise.all(algoTagsPromises)
+      const algoTags = algoTagsResults.filter((tag) => tag !== null)
+
+      if (algoTags.length === 0) return null
 
       const hash = crypto
         .createHash('shake256', { outputLength: 12 })
@@ -81,26 +109,32 @@ export class StreamSubscription {
         .digest('hex')
         .toString()
 
-      const to_insert = {
+      return {
         ...post,
         _id: hash,
-        algoTags,
+        algoTags: algoTags,
         earliestCreatedIndexedAt: Math.min(post.createdAt, post.indexedAt),
       }
-
-      await this.db.replaceOneURI('post', to_insert.uri, to_insert)
     })
 
-    // Handle deleted posts
-    this.jetstream.onDelete("app.bsky.feed.post", async (event) => {
-      await this.db.deleteManyURI('post', [event.uri])
-    })
+    const postsToCreate = (await Promise.all(postsToCreatePromises)).filter(
+      (post) => post !== null,
+    )
 
-    // Start the jetstream
-    await this.jetstream.start()
-  }
+    const dbOperations: Promise<any>[] = []
 
-  async close() {
-    await this.jetstream.close()
+    if (postsToDelete.length > 0) {
+      dbOperations.push(this.db.deleteManyURI('post', postsToDelete))
+    }
+
+    if (postsToCreate.length > 0) {
+      postsToCreate.forEach(async (to_insert) => {
+        if (to_insert)
+          dbOperations.push(
+            this.db.replaceOneURI('post', to_insert.uri, to_insert),
+          )
+      })
+    }
+    await Promise.all(dbOperations)
   }
 }
