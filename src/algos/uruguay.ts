@@ -91,7 +91,6 @@ export class manager extends AlgoManager {
     /(^|[\s\W])Malvín($|[\W\s])/im,
     /(^|[\s\W])Carrasco($|[\W\s])/im,
     /(^|[\s\W])Capurro($|[\W\s])/im,
-    /(^|[\s\W])La Teja($|[\W\s])/im,
     /(^|[\s\W])Villa Española($|[\W\s])/im,
     /(^|[\s\W])Tres Cruces($|[\W\s])/im,
     /(^|[\s\W])Barrio Sur($|[\W\s])/im,
