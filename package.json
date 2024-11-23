@@ -20,20 +20,19 @@
     "build": "tsc && tsc-alias"
   },
   "dependencies": {
+    "@atcute/client": "^2.0.6",
     "@atproto/api": "^0.13.11",
     "@atproto/identity": "^0.4.1",
     "@atproto/lexicon": "^0.4.1",
     "@atproto/repo": "^0.5.0",
-
     "@atproto/syntax": "^0.3.0",
     "@atproto/xrpc-server": "^0.7.1",
+    "@skyware/jetstream": "^0.2.0",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "follow-redirects": "1.15.9",
     "moize": "^6.1.6",
-
     "mongodb": "^6.9.0",
-
     "multiformats": "^9.9.0",
     "node-fetch-native": "^1.6.2",
     "p-ratelimit": "^1.0.1",
