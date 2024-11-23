@@ -6,30 +6,30 @@ import { createServer } from './lexicon'
 import feedGeneration from './methods/feed-generation'
 import describeGenerator from './methods/describe-generator'
 import dbClient from './db/dbClient'
-import { StreamSubscription } from './subscription'
+import { FirehoseSubscription } from './subscription'
 import { AppContext, Config } from './config'
 import wellKnown from './well-known'
 
 export class FeedGenerator {
   public app: express.Application
   public server?: http.Server
-  public jetstream: StreamSubscription
+  public firehose: FirehoseSubscription
   public cfg: Config
 
   constructor(
     app: express.Application,
-    jetstream: StreamSubscription,
+    firehose: FirehoseSubscription,
     cfg: Config,
   ) {
     this.app = app
-    this.jetstream = jetstream
+    this.firehose = firehose
     this.cfg = cfg
   }
 
   static create(cfg: Config) {
     const app = express()
     const db = dbClient
-    const jetstream = new StreamSubscription(db)
+    const firehose = new FirehoseSubscription(db, cfg.subscriptionEndpoint)
 
     const didCache = new MemoryCache()
     const didResolver = new DidResolver({
@@ -55,11 +55,11 @@ export class FeedGenerator {
     app.use(server.xrpc.router)
     app.use(wellKnown(ctx))
 
-    return new FeedGenerator(app, jetstream, cfg)
+    return new FeedGenerator(app, firehose, cfg)
   }
 
   async start(): Promise<http.Server> {
-    this.jetstream.start()
+    this.firehose.run(this.cfg.subscriptionReconnectDelay)
     this.server = this.app.listen(this.cfg.port, this.cfg.listenhost)
     await events.once(this.server, 'listening')
     return this.server
