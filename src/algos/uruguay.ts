@@ -232,15 +232,4 @@ export class manager extends AlgoManager {
 
     return match
   }
-
-  public async start() {
-    console.log("Fetching list members...");
-    this.fetchListMembers("at://did:plcjupasj2qzpxnulq2xa7evmmh/lists/3kdknibmw3q2f").then(members => {
-        console.log("Members fetched:", members);
-        this.matchUsers = members.map(member => member.subject.did);
-        console.log("Match users:", this.matchUsers);
-    }).catch(error => {
-        console.error("Error fetching members:", error);
-    });
-  }
 }
