@@ -150,7 +150,7 @@ export class manager extends AlgoManager {
 
     do {
       const res = await this.agent.app.bsky.graph.getList({
-        list: "at://did:plcjupasj2qzpxnulq2xa7evmmh/lists/3kdknibmw3q2f",
+        list: uri,
         limit: 150,
         cursor,
       })
@@ -235,7 +235,7 @@ export class manager extends AlgoManager {
 
   public async start() {
     console.log("Fetching list members...");
-    this.fetchListMembers().then(members => {
+    this.fetchListMembers("at://did:plcjupasj2qzpxnulq2xa7evmmh/lists/3kdknibmw3q2f").then(members => {
         console.log("Members fetched:", members);
         this.matchUsers = members.map(member => member.subject.did);
         console.log("Match users:", this.matchUsers);
