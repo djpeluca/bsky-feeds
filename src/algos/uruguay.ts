@@ -133,6 +133,8 @@ export class manager extends AlgoManager {
     /(^|[\s\W])#OrsiPresidente($|[\W\s])/im,
     /(^|[\s\W])ñeri($|[\W\s])/im,
     /(^|[\s\W])nieri($|[\W\s])/im,
+    /(^|[\s\W])Level Uy($|[\W\s])/im,
+                  
   ]
 
   // Include Uruguayan users here to always include their posts
