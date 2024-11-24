@@ -5,6 +5,7 @@ import dotenv from 'dotenv'
 import { Post } from '../db/schema'
 import dbClient from '../db/dbClient'
 import getUserDetails from '../addn/getUserDetails'
+import { AppBskyGraphDefs } from '@atproto/api'
 
 dotenv.config()
 
@@ -136,14 +137,29 @@ export class manager extends AlgoManager {
   ]
 
   // Include Uruguayan users here to always include their posts
-  public matchUsers: string[] = [
-    //
-  ]
+  public matchUsers: string[] = []
 
   // Exclude posts from these users
   public bannedUsers: string[] = [
     //
   ]
+
+  public async fetchListMembers(uri: string) {
+    let cursor: string | undefined
+    let members: AppBskyGraphDefs.ListItemView[] = []
+
+    do {
+      const res = await this.agent.app.bsky.graph.getList({
+        list: "at://did:plcjupasj2qzpxnulq2xa7evmmh/lists/3kdknibmw3q2f",
+        limit: 150,
+        cursor,
+      })
+      cursor = res.data.cursor
+      members = members.concat(res.data.items)
+    } while (cursor)
+
+    this.matchUsers = members.map(member => member.subject.did)
+  }
 
   public async periodicTask() {
     await this.db.removeTagFromOldPosts(
@@ -153,14 +169,12 @@ export class manager extends AlgoManager {
   }
 
   public async filter_post(post: Post): Promise<Boolean> {
-
     if (this.agent === null) {
       await this.start()
     }
     if (this.agent === null) return false
 
     let match = false
-
     let matchString = ''
     let matchDescription = ''
     
@@ -203,21 +217,18 @@ export class manager extends AlgoManager {
       }
     });
 
-    this.matchUsers.forEach((user) => {
-      if (matchString.match(user) !== null) {
-        match = true;
-      }
-    })
-
-    // commenting it because of rate limits
+    if (this.matchUsers.includes(post.author)) {
+      match = true;
+    }
+     // commenting it because of rate limits
     // const details = await getUserDetails(post.author, this.agent)
     // matchDescription = `${details.description} ${details.displayName}`.replace('\n', ' ')
 
     this.matchTerms.forEach((term) => {
       if (matchDescription.match(term) !== null) {
-        match = true
+        match = true;
       }
-    })
+    });
 
     return match
   }
