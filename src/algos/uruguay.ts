@@ -239,6 +239,8 @@ export class manager extends AlgoManager {
         console.log("Members fetched:", members);
         this.matchUsers = members.map(member => member.subject.did);
         console.log("Match users:", this.matchUsers);
+    }).catch(error => {
+        console.error("Error fetching members:", error);
     });
   }
 }
