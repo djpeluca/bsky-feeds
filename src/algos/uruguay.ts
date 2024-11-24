@@ -130,6 +130,7 @@ export class manager extends AlgoManager {
     /(^|[\s\W])#UruguayDecide($|[\W\s])/im,
     /(^|[\s\W])#BalotajeUy($|[\W\s])/im,
     /(^|[\s\W])#Elecciones2024($|[\W\s])/im,
+    /(^|[\s\W])#OrsiPresidente($|[\W\s])/im,
   ]
 
   // Include Uruguayan users here to always include their posts
