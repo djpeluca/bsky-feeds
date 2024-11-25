@@ -5,7 +5,6 @@ import dotenv from 'dotenv'
 import { Post } from '../db/schema'
 import dbClient from '../db/dbClient'
 import getUserDetails from '../addn/getUserDetails'
-import { AppBskyGraphDefs } from '@atproto/api'
 
 dotenv.config()
 
@@ -85,6 +84,67 @@ export class manager extends AlgoManager {
 
   public matchPatterns: RegExp[] = [
     /(^|[\s\W])Uruguay($|[\W\s])/im,
+    /(^|[\s\W])Montevideo($|[\W\s])/im,
+    /(?!uruguaiana)(?:urugua|uruguash|montevid|charrua|🇺🇾|punta del este|yorugua|U R U G U A Y|eleccionesuy|Jose Mujica|José Mujica|Pepe Mujica|Carolina Cosse|Yamandu Orsi|Yamandú Orsi|Álvaro Delgado|Blanca Rodriguez|Blanca Rodríguez|Alvaro Delgado|Valeria Ripoll|Lacalle Pou|Batllismo|Willsonismo|Herrerismo|Batllista|Willsonista|herrerista|peñarol|Parque Rodó|Parque Rodo|chivito)\w*/,
+    /(^|[\s\W])Colonia del Sacramento($|[\W\s])/im,
+    /(^|[\s\W])Cabo Polonio($|[\W\s])/im,
+    /(^|[\s\W])Piriápolis($|[\W\s])/im,
+    /(^|[\s\W])Valizas($|[\W\s])/im,
+    /(^|[\s\W])Aguas Dulces($|[\W\s])/im,
+    /(^|[\s\W])Laguna Garzón($|[\W\s])/im,
+    /(^|[\s\W])Ciudad Vieja($|[\W\s])/im,
+    /(^|[\s\W])Mercado del Puerto($|[\W\s])/im,
+    /(^|[\s\W])Rambla de Montevideo($|[\W\s])/im,
+    /(^|[\s\W])Cerro San Antonio($|[\W\s])/im,
+    /(^|[\s\W])Termas del Daymán($|[\W\s])/im,
+    /(^|[\s\W])Salto Grande($|[\W\s])/im,
+    /(^|[\s\W])Pocitos($|[\W\s])/im,
+    /(^|[\s\W])Punta Carretas($|[\W\s])/im,
+    /(^|[\s\W])Malvín($|[\W\s])/im,
+    /(^|[\s\W])Carrasco($|[\W\s])/im,
+    /(^|[\s\W])Capurro($|[\W\s])/im,
+    /(^|[\s\W])Villa Española($|[\W\s])/im,
+    /(^|[\s\W])Tres Cruces($|[\W\s])/im,
+    /(^|[\s\W])Barrio Sur($|[\W\s])/im,
+    /(^|[\s\W])Bañados de Carrasco($|[\W\s])/im,
+    /(^|[\s\W])Casabó($|[\W\s])/im,
+    /(^|[\s\W])Paso de la Arena($|[\W\s])/im,
+    /(^|[\s\W])Colón($|[\W\s])/im,
+    /(^|[\s\W])Sayago($|[\W\s])/im,
+    /(^|[\s\W])Jacinto Vera($|[\W\s])/im,
+    /(^|[\s\W])Villa Dolores($|[\W\s])/im,
+    /(^|[\s\W])Piedras Blancas($|[\W\s])/im,
+    /(^|[\s\W])Las Acacias($|[\W\s])/im,
+    /(^|[\s\W])Nuevo París($|[\W\s])/im,
+    /(^|[\s\W])Flor de Maroñas($|[\W\s])/im,
+    /(^|[\s\W])Cerrito de la Victoria($|[\W\s])/im,
+    /(^|[\s\W])José Gervasio Artigas($|[\W\s])/im,
+    /(^|[\s\W])José Enrique Rodó($|[\W\s])/im,
+    /(^|[\s\W])Juana de Ibarbourou($|[\W\s])/im,
+    /(^|[\s\W])Mario Benedetti($|[\W\s])/im,
+    /(^|[\s\W])Eduardo Galeano($|[\W\s])/im,
+    /(^|[\s\W])Luis Suárez($|[\W\s])/im,
+    /(^|[\s\W])Edinson Cavani($|[\W\s])/im,
+    /(^|[\s\W])Diego Forlán($|[\W\s])/im,
+    /(^|[\s\W])Óscar Tabárez($|[\W\s])/im,
+    /(^|[\s\W])Enzo Francescoli($|[\W\s])/im,
+    /(^|[\s\W])Alfredo Zitarrosa($|[\W\s])/im,
+    /(^|[\s\W])Carlos Gardel($|[\W\s])/im,
+    /(^|[\s\W])Rubén Rada($|[\W\s])/im,
+    /(^|[\s\W])Jorge Drexler($|[\W\s])/im,
+    /(^|[\s\W])China Zorrilla($|[\W\s])/im,
+    /(^|[\s\W])Daniel Hendler($|[\W\s])/im,
+    /(^|[\s\W])José Mujica($|[\W\s])/im,
+    /(^|[\s\W])Tabaré Vázquez($|[\W\s])/im,
+    /(^|[\s\W])Luis Lacalle Pou($|[\W\s])/im,
+    /(^|[\s\W])Julio María Sanguinetti($|[\W\s])/im,
+    /(^|[\s\W])#Balotaje2024($|[\W\s])/im,
+    /(^|[\s\W])#UruguayDecide($|[\W\s])/im,
+    /(^|[\s\W])#BalotajeUy($|[\W\s])/im,
+    /(^|[\s\W])#OrsiPresidente($|[\W\s])/im,
+    /(^|[\s\W])ñeri($|[\W\s])/im,
+    /(^|[\s\W])nieri($|[\W\s])/im,
+    /(^|[\s\W])Level Uy($|[\W\s])/im,
     /(^|[\s\W])Argentina($|[\W\s])/im,
   ]
 
@@ -168,41 +228,6 @@ export class manager extends AlgoManager {
         match = true
       }
     })
-
-    // Fetch list members to check against post authors
-    const uri = 'at://did:plc:jupasj2qzpxnulq2xa7evmmh/app.bsky.graph.list/3kdknibmw3q2f'; // Replace with your actual list URI
-    let cursor: string | undefined;
-    let members: AppBskyGraphDefs.ListItemView[] = [];
-
-    console.log(`Starting to fetch members from the list at URI: ${uri}`); // Log the start of fetching
-
-    do {
-      const res = await this.agent.app.bsky.graph.getList({
-        list: uri,
-        limit: 100, // Fetch up to 100 members per request
-        cursor: cursor, // Include the cursor for pagination
-      }) as unknown as { cursor?: string; items: AppBskyGraphDefs.ListItemView[] };
-
-      // Log each member being added
-      res.items.forEach(member => {
-        console.log(`Adding member: ${member.subject.did}`); // Log each member's ID
-      });
-
-      members = members.concat(res.items); // Concatenate new items
-      cursor = res.cursor; // Update cursor for the next iteration
-
-      console.log(`Fetched ${res.items.length} members. Total members so far: ${members.length}`); // Log number of members fetched
-    } while (cursor); // Continue until no more pages
-
-    console.log(`Finished fetching members. Total members retrieved: ${members.length}`); // Log the end of fetching
-
-    const memberIds = members.map(member => member.subject); // Extract user IDs from members
-
-    // Check if the post author is in the list of members
-    if (members.some(member => member.subject.did === post.author)) {
-      console.log(`Match found: Author ${post.author} is a member of the list.`); // Log when a match is found
-      match = true; // Match if the author is a member
-    }
 
     return match
   }
