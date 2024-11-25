@@ -36,7 +36,7 @@
     uint8arrays "3.0.0"
     zod "^3.23.8"
 
-"@atproto/common@^0.4.2", "@atproto/common@^0.4.4":
+"@atproto/common@^0.4.1", "@atproto/common@^0.4.4":
   version "0.4.4"
   resolved "https://registry.yarnpkg.com/@atproto/common/-/common-0.4.4.tgz#79096aef920f5ad7cda5c682d7ed7416d0581e1a"
   integrity sha512-58tMbn6A1Zu296s/l3uIj8z9d7IRHpZvLOfsFRikaQaYrzhJpL2aPY4uFQ8GJcxnsxeUnxBCrQz9we5jVVJI5Q==
@@ -390,10 +390,10 @@
   dependencies:
     undici-types "~6.19.2"
 
-"@types/node@^20.17.6":
-  version "20.17.6"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-20.17.6.tgz#6e4073230c180d3579e8c60141f99efdf5df0081"
-  integrity sha512-VEI7OdvK2wP7XHnsuXbAJnEpEkF6NjSN45QJlL4VGqZSXsnicpesdTWsg9RISeSdYd3yeRj/y3k5KGjUXYnFwQ==
+"@types/node@^20.17.7":
+  version "20.17.7"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-20.17.7.tgz#790151a28c5a172773d95d53a0c23d3c59a883c4"
+  integrity sha512-sZXXnpBFMKbao30dUAvzKbdwA2JM1fwUtVEq/kxKuPI5mMwZiRElCpTXb0Biq/LMEVpXDZL5G5V0RPnxKeyaYg==
   dependencies:
     undici-types "~6.19.2"
 
