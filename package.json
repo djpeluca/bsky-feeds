@@ -14,6 +14,7 @@
     "publishRiodelaPlata": "tsx scripts/publishRiodelaPlata.ts",
     "publishSalesforce": "tsx scripts/publishSalesforce.ts",
     "publishFediverse": "tsx scripts/publishFediverse.ts",
+    "publishPeniarol": "tsx scripts/publishPeñarol.ts",
     "addSelfToList": "tsx scripts/addSelfToList.ts",
     "start": "node ./dist/index.js",
     "dev": "tsx ./src/index.ts",
