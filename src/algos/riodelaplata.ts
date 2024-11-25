@@ -5,6 +5,7 @@ import dotenv from 'dotenv'
 import { Post } from '../db/schema'
 import dbClient from '../db/dbClient'
 import getUserDetails from '../addn/getUserDetails'
+import { AppBskyGraphDefs } from '@atproto/api'
 
 dotenv.config()
 
@@ -167,6 +168,34 @@ export class manager extends AlgoManager {
         match = true
       }
     })
+
+    // Fetch list members to check against post authors
+    const uri = 'at://did:plc:jupasj2qzpxnulq2xa7evmmh/app.bsky.graph.list/3kdknibmw3q2f'; // Replace with your actual list URI
+    let members: AppBskyGraphDefs.ListItemView[] = [];
+
+    console.log(`Starting to fetch members from the list at URI: ${uri}`); // Log the start of fetching
+
+    const res = await this.agent.app.bsky.graph.getList({
+      list: uri,
+      limit: 150, // Adjust the limit as needed
+    }) as unknown as { items: AppBskyGraphDefs.ListItemView[] };
+
+    // Log each member being added
+    res.items.forEach(member => {
+      console.log(`Adding member: ${member.subject.did}`); // Log each member's ID
+    });
+
+    members = res.items; // Directly assign the fetched items to members
+
+    console.log(`Finished fetching members. Total members retrieved: ${members.length}`); // Log the end of fetching
+
+    const memberIds = members.map(member => member.subject); // Extract user IDs from members
+
+    // Check if the post author is in the list of members
+    if (members.some(member => member.subject.did === post.author)) {
+      console.log(`Match found: Author ${post.author} is a member of the list.`); // Log when a match is found
+      match = true; // Match if the author is a member
+    }
 
     return match
   }
