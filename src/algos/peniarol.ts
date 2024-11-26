@@ -10,7 +10,7 @@ import { AppBskyGraphDefs } from '@atproto/api'
 dotenv.config()
 
 // max 15 chars
-export const shortname = 'peñarol'
+export const shortname = 'peniarol'
 
 export const handler = async (ctx: AppContext, params: QueryParams) => {
   const builder = await dbClient.getLatestPostsForTag({
@@ -215,7 +215,6 @@ export class manager extends AlgoManager {
     matchString = `${post.text} ${matchString}`.replace('\n', ' ')
 
     let lowerCaseMatchString = matchString.toLowerCase();
-    let lowerCaseMatchDescription = matchDescription.toLowerCase();
 
     this.matchPatterns.forEach((pattern) => {
       if (lowerCaseMatchString.match(pattern) !== null) {
@@ -229,12 +228,6 @@ export class manager extends AlgoManager {
      // commenting it because of rate limits
     // const details = await getUserDetails(post.author, this.agent)
     // matchDescription = `${details.description} ${details.displayName}`.replace('\n', ' ')
-
-    this.matchPatterns.forEach((pattern) => {
-      if (lowerCaseMatchDescription.match(pattern) !== null) {
-        match = true;
-      }
-    });
 
     return match
   }
