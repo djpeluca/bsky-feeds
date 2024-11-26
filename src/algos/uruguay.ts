@@ -97,7 +97,6 @@ export class manager extends AlgoManager {
     /(^|[\s\W])Bañados de Carrasco($|[\W\s])/im,
     /(^|[\s\W])Casab[oó]($|[\W\s])/im,
     /(^|[\s\W])Paso de la Arena($|[\W\s])/im,
-    /(^|[\s\W])Col[oó]n($|[\W\s])/im,
     /(^|[\s\W])Sayago($|[\W\s])/im,
     /(^|[\s\W])Jacinto Vera($|[\W\s])/im,
     /(^|[\s\W])Villa Dolores($|[\W\s])/im,
@@ -143,6 +142,7 @@ export class manager extends AlgoManager {
     /(^|[\s\W])Leo Masliah($|[\W\s])/im,
     /(^|[\s\W])cndf($|[\W\s])/im,
     /(^|[\s\W])Antel($|[\W\s])/im,
+    /(^|[\s\W])Sodre($|[\W\s])/im,
   ]
 
   // Include Uruguayan users here to always include their posts
