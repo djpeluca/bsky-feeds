@@ -143,6 +143,9 @@ export class manager extends AlgoManager {
     /(^|[\s\W])cndf($|[\W\s])/im,
     /(^|[\s\W])Antel($|[\W\s])/im,
     /(^|[\s\W])Sodre($|[\W\s])/im,
+    /(^|[\s\W])Frente Amplio($|[\W\s])/im,
+    /(^|[\s\W])FrenteAmplio($|[\W\s])/im,
+    /(^|[\s\W])La celeste($|[\W\s])/im,
   ]
 
   // Include Uruguayan users here to always include their posts

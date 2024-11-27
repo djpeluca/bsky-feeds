@@ -9,6 +9,7 @@ import dbClient from './db/dbClient'
 import { StreamSubscription } from './subscription'
 import { AppContext, Config } from './config'
 import wellKnown from './well-known'
+import path from 'path'
 
 export class FeedGenerator {
   public app: express.Application
@@ -54,6 +55,14 @@ export class FeedGenerator {
     describeGenerator(server, ctx)
     app.use(server.xrpc.router)
     app.use(wellKnown(ctx))
+
+    // Serve static files from the 'public' directory
+    app.use(express.static(path.join(__dirname, 'public')))
+
+    // Route to serve index.html
+    app.get('/', (req, res) => {
+      res.sendFile(path.join(__dirname, 'public', 'index.html'))
+    })
 
     return new FeedGenerator(app, jetstream, cfg)
   }
