@@ -150,7 +150,6 @@ export class manager extends AlgoManager {
     /(^|[\s\W])🖤💛($|[\W\s])/im,
     /(^|[\s\W])💛🖤($|[\W\s])/im,
     /(^|[\s\W])🖤💛($|[\W\s])/im,
-    /(^|[\s\W]).uy($|[\W\s])/im,
     /(^|[\s\W])La celeste($|[\W\s])/im,
     
     
