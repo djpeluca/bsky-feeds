@@ -79,7 +79,6 @@ export class manager extends AlgoManager {
     /(^|[\s\W])Peñarol($|[\W\s])/im,
     /(^|[\s\W])Carbonero($|[\W\s])/im,
     /(^|[\s\W])Manyas($|[\W\s])/im,
-    /(^|[\s\W])Manya($|[\W\s])/im,
     /(^|[\s\W])Mirasoles($|[\W\s])/im,
     /(^|[\s\W])Aurinegro($|[\W\s])/im,
     /(^|[\s\W])Campe[oó]n del Siglo($|[\W\s])/im,
@@ -147,8 +146,6 @@ export class manager extends AlgoManager {
     /(^|[\s\W])padre y decano($|[\W\s])/im,
     /(^|[\s\W])padreydecano($|[\W\s])/im,
     /(^|[\s\W])Diego Aguirre($|[\W\s])/im,
-    /(^|[\s\W])🖤💛($|[\W\s])/im,
-    /(^|[\s\W])💛🖤($|[\W\s])/im,
   ]
 
   // Include Peñarol users here to always include their posts
