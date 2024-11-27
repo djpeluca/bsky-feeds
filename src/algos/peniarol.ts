@@ -79,7 +79,6 @@ export class manager extends AlgoManager {
     /(^|[\s\W])Peñarol($|[\W\s])/im,
     /(^|[\s\W])Carbonero($|[\W\s])/im,
     /(^|[\s\W])Manyas($|[\W\s])/im,
-    /(^|[\s\W])Manya($|[\W\s])/im,
     /(^|[\s\W])Mirasoles($|[\W\s])/im,
     /(^|[\s\W])Aurinegro($|[\W\s])/im,
     /(^|[\s\W])Campe[oó]n del Siglo($|[\W\s])/im,

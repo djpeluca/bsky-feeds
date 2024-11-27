@@ -145,16 +145,7 @@ export class manager extends AlgoManager {
     /(^|[\s\W])Sodre($|[\W\s])/im,
     /(^|[\s\W])Frente Amplio($|[\W\s])/im,
     /(^|[\s\W])FrenteAmplio($|[\W\s])/im,
-    /(^|[\s\W])🔴🔵⚪($|[\W\s])/im,
-    /(^|[\s\W])❤️💙🤍($|[\W\s])/im,
-    /(^|[\s\W])🖤💛($|[\W\s])/im,
-    /(^|[\s\W])💛🖤($|[\W\s])/im,
-    /(^|[\s\W])🖤💛($|[\W\s])/im,
     /(^|[\s\W])La celeste($|[\W\s])/im,
-    
-    
-
-    
   ]
 
   // Include Uruguayan users here to always include their posts
