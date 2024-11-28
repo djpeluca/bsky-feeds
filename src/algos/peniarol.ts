@@ -110,7 +110,6 @@ export class manager extends AlgoManager {
     /(^|[\s\W])William Davis($|[\W\s])/im,
     /(^|[\s\W])John Woosey($|[\W\s])/im,
     /(^|[\s\W])John Mac Gregor($|[\W\s])/im,
-    /(^|[\s\W])Thomas Lewis($|[\W\s])/im,
     /(^|[\s\W])Maquinita Lewis($|[\W\s])/im,
     /(^|[\s\W])Enrique Ballestero($|[\W\s])/im,
     /(^|[\s\W])Ernesto Mascheroni($|[\W\s])/im,
