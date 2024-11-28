@@ -42,7 +42,7 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
 
 export class manager extends AlgoManager {
   public name: string = shortname
-  public authorList: string[]
+  private authorList: string[] = []
   public author_collection = 'list_members'
 
   public async start() {
@@ -51,39 +51,6 @@ export class manager extends AlgoManager {
       'did',
     )
   }
-
-  public matchTerms: string[] = [
-    '🇺🇾',
-    '#Uruguay',
-    'URUGUAY',
-    'uruguay',
-    'Uruguay',
-    'Uruguai',
-    'Uruguaya',
-    'Uruguayo',
-    'Uruguayas',
-    'Uruguayos',
-    'uruguayo',
-    'uruguaya',
-    'Uruguayan',
-    'uruguayan',
-    'Uruguayans',
-    'Montevideo',
-    'montevideo',
-    'Montevideano',
-    'Montevideana',
-    'montevideano',
-    'montevideana',
-    'Charrua',
-    'Charr[uú]a',
-    'charrua',
-    'punta del este',
-    'Punta del Este',
-    'Paysand[uú]',
-    'Artigas',
-    'yorugua',
-    'U R U G U A Y'
-  ]
 
   public matchPatterns: RegExp[] = [
     /(^|[\s\W])Uruguay($|[\W\s])/im,
@@ -175,7 +142,7 @@ export class manager extends AlgoManager {
 
     await this.db.removeTagFromOldPosts(
       this.name,
-      new Date().getTime() - 7 * 24 * 60 * 60 * 1000,
+      Date.now() - 7 * 24 * 60 * 60 * 1000,
     )
 
     if (this.authorList === undefined) {
@@ -184,62 +151,25 @@ export class manager extends AlgoManager {
     }
 
     const lists: string[] = `${process.env.URUGUAY_LISTS}`.split('|')
+    const listMembersPromises = lists.map(list => getListMembers(list, this.agent))
+    const allMembers = await Promise.all(listMembersPromises)
+    let list_members = [...new Set(allMembers.flat())] // Change const to let
 
-    if (process.env.SCIENCE_RECURSE === 'true') {
-      const list_owners: string[] = []
-
-      for (const list of lists) {
-        const members = await getListMembers(list, this.agent)
-        members.forEach((member) => {
-          if (!list_owners.includes(member)) list_owners.push(member)
-        })
-      }
-      for (const owner of list_owners) {
-        const owner_lists = await getUserLists(owner, this.agent)
-        const owner_name = await resoveDIDToHandle(owner, this.agent)
-        owner_lists.forEach((list) => {
-          if (list.name.includes(`${process.env.SCIENCE_SYMBOL}`)) {
-            console.log(
-              `${this.name}: Adding ${list.name} (${owner_name}) to lists`,
-            )
-            lists.push(list.atURL)
-          }
-        })
-      }
-    }
-
-    console.log(`${this.name}: Watching ${lists.length} lists`)
-
-    let list_members: string[] = []
-
-    for (let i = 0; i < lists.length; i++) {
-      const members = await getListMembers(lists[i], this.agent)
-      members.forEach((member) => {
-        if (!list_members.includes(member)) list_members.push(member)
-      })
-    }
-
+    // Handle blocked members
     if (process.env.BLOCKLIST) {
       const blocked_members: string[] = await getListMembers(
         process.env.BLOCKLIST,
         this.agent,
       )
-      list_members = list_members.filter((member) => {
-        return !blocked_members.includes(member)
-      })
+      list_members = list_members.filter(member => !blocked_members.includes(member))
     }
 
     const db_authors = await dbClient.getDistinctFromCollection(
       this.author_collection,
       'did',
     )
-
-    const new_authors = list_members.filter((member) => {
-      return !db_authors.includes(member)
-    })
-    const del_authors = db_authors.filter((member) => {
-      return !list_members.includes(member)
-    })
+    const new_authors = list_members.filter(member => !db_authors.includes(member))
+    const del_authors = db_authors.filter(member => !list_members.includes(member))
 
     console.log(
       `${this.name}: Watching ${db_authors.length} + ${new_authors.length} - ${del_authors.length} = ${list_members.length} authors`,
@@ -249,19 +179,15 @@ export class manager extends AlgoManager {
 
     await dbClient.removeTagFromPostsForAuthor(this.name, del_authors)
 
-    for (let i = 0; i < new_authors.length; i++) {
-      process.stdout.write(`${this.name}: ${i + 1} of ${new_authors.length}: `)
-      const all_posts = await getPostsForUser(new_authors[i], this.agent)
+    for (const new_author of new_authors) {
+      process.stdout.write(`${this.name}: Processing new author: ${new_author} `)
+      const all_posts = await getPostsForUser(new_author, this.agent)
+      const posts = await Promise.all(all_posts.map(async post => (await this.filter_post(post)) ? post : null))
+      
+      // Filter out null values
+      const validPosts = posts.filter(post => post !== null)
 
-      const posts: Post[] = []
-
-      for (let i = 0; i < all_posts.length; i++) {
-        if ((await this.filter_post(all_posts[i])) == true) {
-          posts.push(all_posts[i])
-        }
-      }
-
-      posts.forEach(async (post) => {
+      for (const post of validPosts) {
         const existing = await this.db.getPostForURI(post.uri)
         if (existing === null) {
           post.algoTags = [this.name]
@@ -271,91 +197,45 @@ export class manager extends AlgoManager {
           post.algoTags = tags
           await this.db.replaceOneURI('post', post.uri, post)
         }
-      })
+      }
 
-      await this.db.replaceOneDID(this.author_collection, new_authors[i], {
-        did: new_authors[i],
-      })
+      await this.db.replaceOneDID(this.author_collection, new_author, { did: new_author })
     }
 
-    del_authors.forEach(async (author) => {
-      if (this.agent !== null)
-        console.log(
-          `${this.name}: Removing ${await resoveDIDToHandle(
-            author,
-            this.agent,
-          )}`,
-        )
+    for (const author of del_authors) {
+      if (this.agent !== null) {
+        console.log(`${this.name}: Removing ${await resoveDIDToHandle(author, this.agent)}`)
+      }
       await this.db.deleteManyDID(this.author_collection, [author])
-    })
+    }
   }
 
   public async filter_post(post: Post): Promise<Boolean> {
     if (this.agent === null) {
-      await this.start()
-    }
-    if (this.agent === null) return false
-
-    let match = false
-    let matchString = ''
-    let matchDescription = ''
-    
-    if (post.embed?.images) {
-      const imagesArr = post.embed.images
-      imagesArr.forEach((image) => {
-        matchString = `${matchString} ${image.alt}`.replace('\n', ' ')
-      })
+      await this.start();
+      if (this.agent === null) return false; // Early return if agent is still null
     }
 
-    if (post.embed?.alt) {
-      matchString = `${matchString} ${post.embed.alt}`.replace('\n', ' ')
-    }
-
-    if (post.embed?.media?.alt) {
-      matchString = `${matchString} ${post.embed?.media?.alt}`.replace(
-        '\n',
-        ' ',
-      )
-    }
-
-    if (post.tags) {
-      matchString = `${post.tags.join(' ')} ${matchString}`
-    }
-
-    matchString = `${post.text} ${matchString}`.replace('\n', ' ')
-
-    let lowerCaseMatchString = matchString.toLowerCase();
-
-    this.matchPatterns.forEach((pattern) => {
-      if (lowerCaseMatchString.match(pattern) !== null) {
-        match = true;
-      }
-    });
-
-    // Convert matchTerms to lowercase for comparison
-    this.matchTerms.forEach((term) => {
-      if (lowerCaseMatchString.includes(term.toLowerCase())) {
-        match = true;
-      }
-    });
-
-    if (this.matchUsers.includes(post.author)) {
-      match = true;
-    }
-     // commenting it because of rate limits
-    // const details = await getUserDetails(post.author, this.agent)
-    // matchDescription = `${details.description} ${details.displayName}`.replace('\n', ' ')
-
-    this.matchTerms.forEach((term) => {
-      if (matchDescription.match(term) !== null) {
-        match = true;
-      }
-    });
-
+    // Check if the post's author is in the cached authorList
     if (this.authorList.includes(post.author)) {
-      match = true;
+      return true; // Skip pattern matching for these posts
     }
 
-    return match
+    // Build matchString from post properties
+    const matchString = [
+      post.embed?.images?.map(image => image.alt).join(' ') ?? '',
+      post.embed?.alt ?? '',
+      post.embed?.media?.alt ?? '',
+      post.tags?.join(' ') ?? '',
+      post.text
+    ].join(' ');
+
+    const lowerCaseMatchString = matchString.toLowerCase();
+
+    // Combine match checks
+    return (
+      this.matchPatterns.some(pattern => lowerCaseMatchString.match(pattern)) ||
+      this.authorList.includes(post.author)
+    );
   }
 }
