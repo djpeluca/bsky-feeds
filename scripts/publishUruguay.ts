@@ -25,7 +25,7 @@ const run = async () => {
 
   // (Optional) A description of your feed
   // Ex: Top trending content from the whole network
-  const description = 'Uruguay en Bluesky 🇺🇾🧉🦋. Todo lo que se habla sobre Uruguay. Además todas las publicaciones de usuarios de Uruguay.Para agregarte a quitarte de la lista contactá a @adrian.uy'
+  const description = 'Uruguay en Bluesky 🇺🇾🧉🦋. Todo lo que se habla sobre Uruguay. Además todas las publicaciones de usuarios de Uruguay. Para agregarte o quitarte de la lista contactá a @adrian.uy'
 
   // (Optional) The path to an image to be used as your feed's avatar
   // Ex: ~/path/to/avatar.jpeg
