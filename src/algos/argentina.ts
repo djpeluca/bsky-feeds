@@ -37,36 +37,53 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
 export class manager extends AlgoManager {
   public name: string = shortname
 
-  public matchTerms: string[] = [
+  // Define matchPatterns as a class member
+  public matchPatterns: RegExp[] = [
     '🇦🇷',
-    '#Argentina',
-    '#TwitterArg',
-    '#Twitterarg',
-    '#twitterarg',
-    'Argentina',
-    'Argentino',
-    'Argentine',
-    'Argenta',
-    'Argentinas',
-    'Argentinos',
-    'Argentinian',
-    'Argentinians',
+    'Argent',
+    'TwitterArg',
     'Buenos Aires',
     'Malvinas',
     'Maradona',
-    'Maradonian',
+    'conourbano',
+    'Tierra del Fuego',
+    'Gualeguaych[úu]',
+    'Capital Federal',
     'Puerto Madero',
     'Patagonia',
-    'Cristina Kirchner',
+    'Kirchner',
     'Alberto Fernandez',
     'Milei',
     'Cyberciruja',
-    '#Elecciones2023',
-  ]
-
-  public matchPatterns: RegExp[] = [
-    /(^|[\s\W])Argentina($|[\W\s])/im,
-  ]
+    'Lionel Messi',
+    'Eva Per[óo]n',
+    'Evita Per[óo]n',
+    'Domingo Per[óo]n',
+    'Juan Per[óo]n',
+    'Per[óo]nia',
+    'Per[óo]nismo',
+    'Jorge Luis Borges',
+    'Mercedes Sosa',
+    'Carlos Gardel',
+    'La Bombonera',
+    'Monumental de Nuñez',
+    'Casa Rosada',
+    'Perito Moreno',
+    'San Mart[ií]n de los Andes',
+    'Victoria Villarruel',
+    'Sergio Massa',
+    'Larreta', 
+    'Patricia Bullrich',
+    'Pato Bullrich',
+    'Cris Morena',
+    'Spreen',
+    'Colapinto',
+    'Jorge Rial',
+    'Susana Gimenez',
+    'Caputo',
+    'Kicillof',
+    'Macri',
+  ].map(term => new RegExp(`(^|[\\s\\W])${term}($|[\\W\\s])`, 'im'));
 
   // Include Argentinian users here to always include their posts
   public matchUsers: string[] = [
@@ -94,61 +111,20 @@ export class manager extends AlgoManager {
 
     let match = false
 
-    let matchString = ''
-    let matchDescription = ''
+    // Build matchString from post properties
+    const matchString = [
+      post.embed?.images?.map(image => image.alt).join(' ') ?? '',
+      post.embed?.alt ?? '',
+      post.embed?.media?.alt ?? '',
+      post.tags?.join(' ') ?? '',
+      post.text
+    ].join(' ');
 
-    if (post.embed?.images) {
-      const imagesArr = post.embed.images
-      imagesArr.forEach((image) => {
-        matchString = `${matchString} ${image.alt}`.replace('\n', ' ')
-      })
-    }
+    const lowerCaseMatchString = matchString.toLowerCase();
 
-    if (post.embed?.alt) {
-      matchString = `${matchString} ${post.embed.alt}`.replace('\n', ' ')
-    }
-
-    if (post.embed?.media?.alt) {
-      matchString = `${matchString} ${post.embed?.media?.alt}`.replace(
-        '\n',
-        ' ',
-      )
-    }
-
-    if (post.tags) {
-      matchString = `${post.tags.join(' ')} ${matchString}`
-    }
-
-    matchString = `${post.text} ${matchString}`.replace('\n', ' ')
-
-    this.matchPatterns.forEach((pattern) => {
-      if (matchString.match(pattern) !== null) {
-        match = true
-      }
-    })
-
-    this.matchTerms.forEach((term) => {
-      if (matchString.match(term) !== null) {
-        match = true
-      }
-    })
-
-    this.matchUsers.forEach((user) => {
-      if (matchString.match(user) !== null) {
-        match = true
-      }
-    })
-
-    // commenting it because of rate limits
-    // const details = await getUserDetails(post.author, this.agent)
-    // matchDescription = `${details.description} ${details.displayName}`.replace('\n', ' ')
-
-    this.matchTerms.forEach((term) => {
-      if (matchDescription.match(term) !== null) {
-        match = true
-      }
-    })
-
-    return match
+    // Combine match checks
+    return (
+      this.matchPatterns.some(pattern => lowerCaseMatchString.match(pattern))
+    );
   }
 }
