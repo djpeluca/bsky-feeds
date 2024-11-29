@@ -165,40 +165,45 @@ export class manager extends AlgoManager {
       this.author_collection,
       'did',
     )
-
-    // Combine new and deleted authors in one go
     const new_authors = list_members.filter(member => !db_authors.includes(member))
     const del_authors = db_authors.filter(member => !list_members.includes(member))
 
-    // Update authorList in one go
+    console.log(
+      `${this.name}: Watching ${db_authors.length} + ${new_authors.length} - ${del_authors.length} = ${list_members.length} authors`,
+    )
+
     this.authorList = [...list_members]
 
-    // Remove tags for deleted authors
     await dbClient.removeTagFromPostsForAuthor(this.name, del_authors)
 
-    // Fetch all posts for new authors in a single call
-    const allPostsPromises = new_authors.map(new_author => getPostsForUser(new_author, this.agent))
-    const allPosts = await Promise.all(allPostsPromises)
-
-    for (const [index, new_author] of new_authors.entries()) {
-      const posts = allPosts[index]
-      const validPosts = await Promise.all(posts.map(async post => (await this.filter_post(post)) ? post : null))
-
+    for (const new_author of new_authors) {
+      process.stdout.write(`${this.name}: Processing new author: ${new_author} `)
+      const all_posts = await getPostsForUser(new_author, this.agent)
+      const posts = await Promise.all(all_posts.map(async post => (await this.filter_post(post)) ? post : null))
+      
       // Filter out null values
-      const filteredPosts = validPosts.filter(post => post !== null)
+      const validPosts = posts.filter(post => post !== null)
 
-      for (const post of filteredPosts) {
+      for (const post of validPosts) {
         const existing = await this.db.getPostForURI(post.uri)
-        post.algoTags = existing ? [...new Set([...existing.algoTags, this.name])] : [this.name]
-        await this.db.replaceOneURI('post', post.uri, post)
+        if (existing === null) {
+          post.algoTags = [this.name]
+          await this.db.replaceOneURI('post', post.uri, post)
+        } else {
+          const tags = [...new Set([...existing.algoTags, this.name])]
+          post.algoTags = tags
+          await this.db.replaceOneURI('post', post.uri, post)
+        }
       }
 
       await this.db.replaceOneDID(this.author_collection, new_author, { did: new_author })
     }
 
-    // Delete authors in one go
-    if (del_authors.length > 0) {
-      await this.db.deleteManyDID(this.author_collection, del_authors)
+    for (const author of del_authors) {
+      if (this.agent !== null) {
+        console.log(`${this.name}: Removing ${await resoveDIDToHandle(author, this.agent)}`)
+      }
+      await this.db.deleteManyDID(this.author_collection, [author])
     }
   }
 
