@@ -150,7 +150,7 @@ export class manager extends AlgoManager {
     const lists: string[] = `${process.env.URUGUAY_LISTS}`.split('|')
     const listMembersPromises = lists.map(list => getListMembers(list, this.agent))
     const allMembers = await Promise.all(listMembersPromises)
-    let list_members = [...new Set(allMembers.flat())]
+    let list_members = [...new Set(allMembers.flat())] // Change const to let
 
     // Handle blocked members
     if (process.env.BLOCKLIST) {
@@ -173,18 +173,8 @@ export class manager extends AlgoManager {
     // Update authorList in one go
     this.authorList = [...list_members]
 
-    // Define the type for bulk operations
-    const bulkOps: { updateMany?: any; updateOne?: any }[] = [];
-
     // Remove tags for deleted authors
-    if (del_authors.length > 0) {
-      bulkOps.push({
-        updateMany: {
-          filter: { author: { $in: del_authors } },
-          update: { $pull: { algoTags: this.name } }
-        }
-      })
-    }
+    await dbClient.removeTagFromPostsForAuthor(this.name, del_authors)
 
     // Fetch all posts for new authors in a single call
     const allPostsPromises = new_authors.map(new_author => getPostsForUser(new_author, this.agent))
@@ -200,30 +190,10 @@ export class manager extends AlgoManager {
       for (const post of filteredPosts) {
         const existing = await this.db.getPostForURI(post.uri)
         post.algoTags = existing ? [...new Set([...existing.algoTags, this.name])] : [this.name]
-
-        // Prepare bulk update for posts
-        bulkOps.push({
-          updateOne: {
-            filter: { uri: post.uri },
-            update: { $set: post },
-            upsert: true // Insert if not found
-          }
-        })
+        await this.db.replaceOneURI('post', post.uri, post)
       }
 
-      // Prepare bulk operation for new authors
-      bulkOps.push({
-        updateOne: {
-          filter: { did: new_author },
-          update: { $set: { did: new_author } },
-          upsert: true // Insert if not found
-        }
-      })
-    }
-
-    // Execute bulk operations
-    if (bulkOps.length > 0) {
-      await this.db.collection('post').bulkWrite(bulkOps)
+      await this.db.replaceOneDID(this.author_collection, new_author, { did: new_author })
     }
 
     // Delete authors in one go
