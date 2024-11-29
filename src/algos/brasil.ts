@@ -88,13 +88,7 @@ export class manager extends AlgoManager {
     'uruguai'
   ]
 
-  public matchPatterns: RegExp[] = [
-    /\b\w+ão\b/,
-    /\b\w+[eé]m\b/,
-    /\b\w*nh\w*\b/,
-    /\b\w*lh\w*\b/,
-    /\b\w*ç\w*\b/
-  ]
+
 
   // Include Portuguese users here to always include their posts
   public matchUsers: string[] = [
@@ -148,11 +142,6 @@ export class manager extends AlgoManager {
 
     matchString = `${post.text} ${matchString}`.replace('\n', ' ')
 
-    this.matchPatterns.forEach((pattern) => {
-      if (matchString.match(pattern) !== null) {
-        match = true
-      }
-    })
 
     this.matchTerms.forEach((term) => {
       if (matchString.match(term) !== null) {
