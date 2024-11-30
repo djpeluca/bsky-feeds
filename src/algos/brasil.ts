@@ -108,6 +108,7 @@ export class manager extends AlgoManager {
   }
 
   public async filter_post(post: Post): Promise<Boolean> {
+    if (post.author === 'did:plc:mcb6n67plnrlx4lg35natk2b') return false // sorry nowbreezing.ntw.app
     if (this.agent === null) {
       await this.start()
     }
@@ -115,56 +116,20 @@ export class manager extends AlgoManager {
 
     let match = false
 
-    let matchString = ''
-    let matchDescription = ''
+    // Build matchString from post properties
+    const matchString = [
+      post.embed?.images?.map(image => image.alt).join(' ') ?? '',
+      post.embed?.alt ?? '',
+      post.embed?.media?.alt ?? '',
+      post.tags?.join(' ') ?? '',
+      post.text
+    ].join(' ');
 
-    if (post.embed?.images) {
-      const imagesArr = post.embed.images
-      imagesArr.forEach((image) => {
-        matchString = `${matchString} ${image.alt}`.replace('\n', ' ')
-      })
-    }
+    const lowerCaseMatchString = matchString.toLowerCase();
 
-    if (post.embed?.alt) {
-      matchString = `${matchString} ${post.embed.alt}`.replace('\n', ' ')
-    }
-
-    if (post.embed?.media?.alt) {
-      matchString = `${matchString} ${post.embed?.media?.alt}`.replace(
-        '\n',
-        ' ',
-      )
-    }
-
-    if (post.tags) {
-      matchString = `${post.tags.join(' ')} ${matchString}`
-    }
-
-    matchString = `${post.text} ${matchString}`.replace('\n', ' ')
-
-
-    this.matchTerms.forEach((term) => {
-      if (matchString.match(term) !== null) {
-        match = true
-      }
-    })
-
-    this.matchUsers.forEach((user) => {
-      if (matchString.match(user) !== null) {
-        match = true
-      }
-    })
-
-    // commenting it because of rate limits
-    // const details = await getUserDetails(post.author, this.agent)
-    // matchDescription = `${details.description} ${details.displayName}`.replace('\n', ' ')
-
-    this.matchTerms.forEach((term) => {
-      if (matchDescription.match(term) !== null) {
-        match = true
-      }
-    })
-
-    return match
+    // Combine match checks
+    return (
+      this.matchTerms.some(pattern => lowerCaseMatchString.match(pattern))
+    );
   }
 }

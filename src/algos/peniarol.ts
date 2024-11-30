@@ -180,54 +180,28 @@ export class manager extends AlgoManager {
   }
 
   public async filter_post(post: Post): Promise<Boolean> {
+    if (post.author === 'did:plc:mcb6n67plnrlx4lg35natk2b') return false // sorry nowbreezing.ntw.app
     if (this.agent === null) {
       await this.start()
     }
     if (this.agent === null) return false
 
     let match = false
-    let matchString = ''
-    let matchDescription = ''
-    
-    if (post.embed?.images) {
-      const imagesArr = post.embed.images
-      imagesArr.forEach((image) => {
-        matchString = `${matchString} ${image.alt}`.replace('\n', ' ')
-      })
-    }
 
-    if (post.embed?.alt) {
-      matchString = `${matchString} ${post.embed.alt}`.replace('\n', ' ')
-    }
+    // Build matchString from post properties
+    const matchString = [
+      post.embed?.images?.map(image => image.alt).join(' ') ?? '',
+      post.embed?.alt ?? '',
+      post.embed?.media?.alt ?? '',
+      post.tags?.join(' ') ?? '',
+      post.text
+    ].join(' ');
 
-    if (post.embed?.media?.alt) {
-      matchString = `${matchString} ${post.embed?.media?.alt}`.replace(
-        '\n',
-        ' ',
-      )
-    }
+    const lowerCaseMatchString = matchString.toLowerCase();
 
-    if (post.tags) {
-      matchString = `${post.tags.join(' ')} ${matchString}`
-    }
-
-    matchString = `${post.text} ${matchString}`.replace('\n', ' ')
-
-    let lowerCaseMatchString = matchString.toLowerCase();
-
-    this.matchPatterns.forEach((pattern) => {
-      if (lowerCaseMatchString.match(pattern) !== null) {
-        match = true;
-      }
-    });
-
-    if (this.matchUsers.includes(post.author)) {
-      match = true;
-    }
-     // commenting it because of rate limits
-    // const details = await getUserDetails(post.author, this.agent)
-    // matchDescription = `${details.description} ${details.displayName}`.replace('\n', ' ')
-
-    return match
+    // Combine match checks
+    return (
+      this.matchPatterns.some(pattern => lowerCaseMatchString.match(pattern))
+    );
   }
 }
