@@ -48,10 +48,8 @@ export class manager extends AlgoManager {
     'tamb[eé]m',
     'então',
     'você',
-    'l[aá]',
     'depois',
     'agora',
-    'bem',
     'falar',
     'conosco',
     'certo',
@@ -61,7 +59,6 @@ export class manager extends AlgoManager {
     'embora',
     'enquanto',
     'portanto',
-    'ali[aá]s',
     'pois',
     'contudo',
     'entretanto',
@@ -73,22 +70,15 @@ export class manager extends AlgoManager {
     'al[eé]m',
     'algu[eé]m',
     'ningu[eé]m',
-    'ontem',
     'hoje',
     'amanhã',
     'sempre',
-    'nunca',
-    'j[aá]',
     'ainda',
     'quase',
     'demais',
-    'c[aá]',
     'brasil',
-    'a[ií]',
     'uruguai'
   ]
-
-
 
   // Include Portuguese users here to always include their posts
   public matchUsers: string[] = [

@@ -149,7 +149,7 @@ export class manager extends AlgoManager {
     const lists: string[] = `${process.env.URUGUAY_LISTS}`.split('|');
     const listMembersPromises = lists.map(list => getListMembers(list, this.agent));
     const allMembers = await Promise.all(listMembersPromises);
-    let list_members = [...new Set(allMembers.flat())]; // Change const to let
+    let list_members = [...new Set(allMembers.flat())];
 
     // Handle blocked members
     if (process.env.BLOCKLIST) {
@@ -160,23 +160,24 @@ export class manager extends AlgoManager {
       list_members = list_members.filter(member => !blocked_members.includes(member))
     }
 
-     // Fetch all distinct authors in one go
-     const db_authors = await dbClient.getDistinctFromCollection(
+    // Fetch all distinct authors in one go
+    const db_authors = await dbClient.getDistinctFromCollection(
       this.author_collection,
       'did',
     );
 
-      // Combine new and deleted authors in one go
-      const new_authors = list_members.filter(member => !db_authors.includes(member));
-      const del_authors = db_authors.filter(member => !list_members.includes(member));
-  
-      // Update authorList in one go
-      this.authorList = [...list_members];
-  
-      // Remove tags for deleted authors in bulk
-      if (del_authors.length > 0) {
-        await this.db.deleteManyDID(this.author_collection, del_authors);
-      }
+    // Use Set for faster lookups
+    const authorSet = new Set(db_authors);
+    const new_authors = list_members.filter(member => !authorSet.has(member));
+    const del_authors = db_authors.filter(member => !list_members.includes(member));
+
+    // Update authorList in one go
+    this.authorList = [...list_members];
+
+    // Remove tags for deleted authors in bulk
+    if (del_authors.length > 0) {
+      await this.db.deleteManyDID(this.author_collection, del_authors);
+    }
 
     // Fetch all posts for new authors in a single call
     const allPostsPromises = new_authors.map(new_author => getPostsForUser(new_author, this.agent));
@@ -186,11 +187,11 @@ export class manager extends AlgoManager {
     let bulkOps: any[] = [];
 
     for (const [index, new_author] of new_authors.entries()) {
-      const posts = allPosts[index]
-      const validPosts = await Promise.all(posts.map(async post => (await this.filter_post(post)) ? post : null))
+      const posts = allPosts[index];
+      const validPosts = await Promise.all(posts.map(async post => (await this.filter_post(post)) ? post : null));
 
       // Filter out null values
-      const filteredPosts = validPosts;
+      const filteredPosts = validPosts.filter(post => post !== null);
 
       // Prepare bulk operation for author updates
       bulkOps.push({
@@ -205,7 +206,7 @@ export class manager extends AlgoManager {
     // Execute bulk operations for posts
     if (bulkOps.length > 0) {
       await this.db.bulkWrite('post', bulkOps);
-    } 
+    }
   }
 
   public async filter_post(post: Post): Promise<Boolean> {
@@ -214,8 +215,9 @@ export class manager extends AlgoManager {
       if (this.agent === null) return false; // Early return if agent is still null
     }
 
-    // Check if the post's author is in the cached authorList
-    if (this.authorList.includes(post.author)) {
+    // Use Set for faster lookups
+    const authorSet = new Set(this.authorList);
+    if (authorSet.has(post.author)) {
       return true; // Skip pattern matching for these posts
     }
 
@@ -226,14 +228,9 @@ export class manager extends AlgoManager {
       post.embed?.media?.alt ?? '',
       post.tags?.join(' ') ?? '',
       post.text
-    ].join(' ');
-
-    const lowerCaseMatchString = matchString.toLowerCase();
+    ].join(' ').toLowerCase(); // Convert to lower case once
 
     // Combine match checks
-    return (
-      this.matchPatterns.some(pattern => lowerCaseMatchString.match(pattern)) ||
-      this.authorList.includes(post.author)
-    );
+    return this.matchPatterns.some(pattern => pattern.test(matchString));
   }
 }
