@@ -140,17 +140,16 @@ export class manager extends AlgoManager {
     await this.db.removeTagFromOldPosts(
       this.name,
       Date.now() - 7 * 24 * 60 * 60 * 1000,
-    )
+    );
 
     if (this.authorList === undefined) {
-      console.log(`${this.name}: Initialising authors from database`)
       await this.start()
     }
 
-    const lists: string[] = `${process.env.URUGUAY_LISTS}`.split('|')
-    const listMembersPromises = lists.map(list => getListMembers(list, this.agent))
-    const allMembers = await Promise.all(listMembersPromises)
-    let list_members = [...new Set(allMembers.flat())] // Change const to let
+    const lists: string[] = `${process.env.URUGUAY_LISTS}`.split('|');
+    const listMembersPromises = lists.map(list => getListMembers(list, this.agent));
+    const allMembers = await Promise.all(listMembersPromises);
+    let list_members = [...new Set(allMembers.flat())]; // Change const to let
 
     // Handle blocked members
     if (process.env.BLOCKLIST) {
@@ -161,45 +160,52 @@ export class manager extends AlgoManager {
       list_members = list_members.filter(member => !blocked_members.includes(member))
     }
 
-    const db_authors = await dbClient.getDistinctFromCollection(
+     // Fetch all distinct authors in one go
+     const db_authors = await dbClient.getDistinctFromCollection(
       this.author_collection,
       'did',
-    )
+    );
 
-    // Combine new and deleted authors in one go
-    const new_authors = list_members.filter(member => !db_authors.includes(member))
-    const del_authors = db_authors.filter(member => !list_members.includes(member))
-
-    // Update authorList in one go
-    this.authorList = [...list_members]
-
-    // Remove tags for deleted authors
-    await dbClient.removeTagFromPostsForAuthor(this.name, del_authors)
+      // Combine new and deleted authors in one go
+      const new_authors = list_members.filter(member => !db_authors.includes(member));
+      const del_authors = db_authors.filter(member => !list_members.includes(member));
+  
+      // Update authorList in one go
+      this.authorList = [...list_members];
+  
+      // Remove tags for deleted authors in bulk
+      if (del_authors.length > 0) {
+        await this.db.deleteManyDID(this.author_collection, del_authors);
+      }
 
     // Fetch all posts for new authors in a single call
-    const allPostsPromises = new_authors.map(new_author => getPostsForUser(new_author, this.agent))
-    const allPosts = await Promise.all(allPostsPromises)
+    const allPostsPromises = new_authors.map(new_author => getPostsForUser(new_author, this.agent));
+    let allPosts = await Promise.all(allPostsPromises);
+
+    // Declare bulkOps array to hold operations
+    let bulkOps: any[] = [];
 
     for (const [index, new_author] of new_authors.entries()) {
       const posts = allPosts[index]
       const validPosts = await Promise.all(posts.map(async post => (await this.filter_post(post)) ? post : null))
 
       // Filter out null values
-      const filteredPosts = validPosts.filter(post => post !== null)
+      const filteredPosts = validPosts;
 
-      for (const post of filteredPosts) {
-        const existing = await this.db.getPostForURI(post.uri)
-        post.algoTags = existing ? [...new Set([...existing.algoTags, this.name])] : [this.name]
-        await this.db.replaceOneURI('post', post.uri, post)
-      }
-
-      await this.db.replaceOneDID(this.author_collection, new_author, { did: new_author })
+      // Prepare bulk operation for author updates
+      bulkOps.push({
+        updateOne: {
+          filter: { did: new_author },
+          update: { $set: { did: new_author } },
+          upsert: true,
+        },
+      });
     }
 
-    // Delete authors in one go
-    if (del_authors.length > 0) {
-      await this.db.deleteManyDID(this.author_collection, del_authors)
-    }
+    // Execute bulk operations for posts
+    if (bulkOps.length > 0) {
+      await this.db.bulkWrite('post', bulkOps);
+    } 
   }
 
   public async filter_post(post: Post): Promise<Boolean> {

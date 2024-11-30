@@ -365,6 +365,38 @@ class dbSingleton {
     if (results === undefined) return null
     return results
   }
+
+  async bulkWrite(collection: string, operations: any[]) {
+    const bulkOps = operations.map(op => {
+      if (op.updateOne) {
+        return {
+          updateOne: {
+            filter: op.updateOne.filter,
+            update: op.updateOne.update,
+            upsert: op.updateOne.upsert,
+          },
+        };
+      } else if (op.insertOne) {
+        return {
+          insertOne: {
+            document: op.insertOne.document,
+          },
+        };
+      } else if (op.deleteOne) {
+        return {
+          deleteOne: {
+            filter: op.deleteOne.filter,
+          },
+        };
+      }
+      throw new Error('Unsupported operation type');
+    });
+
+    const collectionRef = this.client?.db().collection(collection);
+    if (!collectionRef) throw new Error('Collection reference is undefined');
+    const result = await collectionRef.bulkWrite(bulkOps);
+    return result;
+  }
 }
 
 const dbClient = dbSingleton.getInstance()
