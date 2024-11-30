@@ -109,8 +109,6 @@ export class manager extends AlgoManager {
     }
     if (this.agent === null) return false
 
-    let match = false
-
     // Build matchString from post properties
     const matchString = [
       post.embed?.images?.map(image => image.alt).join(' ') ?? '',
