@@ -37,54 +37,7 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
 export class manager extends AlgoManager {
   public name: string = shortname
 
-  public matchTerms: string[] = [
-    '🇦🇷',
-    '#Argentina',
-    '#TwitterArg',
-    '#Twitterarg',
-    '#twitterarg',
-    'Argentina',
-    'Argentino',
-    'Argentine',
-    'Argenta',
-    'Argentinas',
-    'Argentinos',
-    'Argentinian',
-    'Argentinians',
-    'Buenos Aires',
-    'Malvinas',
-    'Maradona',
-    'Maradonian',
-    'Puerto Madero',
-    'Patagonia',
-    'Cristina Kirchner',
-    'Alberto Fernandez',
-    'Milei',
-    'Cyberciruja',
-    '🇺🇾',
-    '#Uruguay',
-    'Uruguay',
-    'Uruguai',
-    'Uruguaya',
-    'Uruguayo',
-    'Uruguayas',
-    'Uruguayos',
-    'Uruguayan',
-    'Uruguayans',
-    'Montevideo',
-    'Punta del Este',
-    'Paysandu',
-    'Paysand[uú]',
-    'Artigas',
-    'Rio de la Plata',
-    'dulce de leche',
-    'carpincho',
-    '🧉',
-  ]
-
   public matchPatterns: RegExp[] = [
-    /(^|[\s\W])Uruguay($|[\W\s])/im,
-    /(^|[\s\W])Montevideo($|[\W\s])/im,
     /(?!uruguaiana)(?:urugua|uruguash|montevid|charrua|🇺🇾|punta del este|yorugua|U R U G U A Y|eleccionesuy|Jose Mujica|Jos[eé] Mujica|Pepe Mujica|Carolina Cosse|Yamandu Orsi|Yamand[uú] Orsi|[aá]lvaro Delgado|Blanca Rodriguez|Blanca Rodr[ií]guez|Alvaro Delgado|Valeria Ripoll|Lacalle Pou|Batllismo|Willsonismo|Herrerismo|Batllista|Willsonista|herrerista|peñarol|Parque Rod[oó]|Parque Rodo|chivito)\w*/,
     /(^|[\s\W])Colonia del Sacramento($|[\W\s])/im,
     /(^|[\s\W])Cabo Polonio($|[\W\s])/im,
@@ -145,7 +98,24 @@ export class manager extends AlgoManager {
     /(^|[\s\W])ñeri($|[\W\s])/im,
     /(^|[\s\W])nieri($|[\W\s])/im,
     /(^|[\s\W])Level Uy($|[\W\s])/im,
-    /(^|[\s\W])Argentina($|[\W\s])/im,
+    /(^|[\s\W])Argent($|[\W\s])/im,
+    /(^|[\s\W])Buenos Aires($|[\W\s])/im,
+    /(^|[\s\W])Malvinas($|[\W\s])/im,
+    /(^|[\s\W])Maradona($|[\W\s])/im,
+    /(^|[\s\W])Maradonian($|[\W\s])/im,
+    /(^|[\s\W])Puerto Madero($|[\W\s])/im,
+    /(^|[\s\W])Patagonia($|[\W\s])/im,
+    /(^|[\s\W])Kirchner($|[\W\s])/im,
+    /(^|[\s\W])CFK($|[\W\s])/im,
+    /(^|[\s\W])Alberto Fernandez($|[\W\s])/im,
+    /(^|[\s\W])Milei($|[\W\s])/im,
+    /(^|[\s\W])Cyberciruja($|[\W\s])/im,
+    /(^|[\s\W])Paysand[uú]($|[\W\s])/im,
+    /(^|[\s\W])Artigas($|[\W\s])/im,
+    /(^|[\s\W])Rio de la Plata($|[\W\s])/im,
+    /(^|[\s\W])dulce de leche($|[\W\s])/im,
+    /(^|[\s\W])carpincho($|[\W\s])/im,
+    /(^|[\s\W])🧉($|[\W\s])/im,
   ]
 
   // Include Argentinian users here to always include their posts
@@ -174,61 +144,20 @@ export class manager extends AlgoManager {
 
     let match = false
 
-    let matchString = ''
-    let matchDescription = ''
+    // Build matchString from post properties
+    const matchString = [
+      post.embed?.images?.map(image => image.alt).join(' ') ?? '',
+      post.embed?.alt ?? '',
+      post.embed?.media?.alt ?? '',
+      post.tags?.join(' ') ?? '',
+      post.text
+    ].join(' ');
 
-    if (post.embed?.images) {
-      const imagesArr = post.embed.images
-      imagesArr.forEach((image) => {
-        matchString = `${matchString} ${image.alt}`.replace('\n', ' ')
-      })
-    }
+    const lowerCaseMatchString = matchString.toLowerCase();
 
-    if (post.embed?.alt) {
-      matchString = `${matchString} ${post.embed.alt}`.replace('\n', ' ')
-    }
-
-    if (post.embed?.media?.alt) {
-      matchString = `${matchString} ${post.embed?.media?.alt}`.replace(
-        '\n',
-        ' ',
-      )
-    }
-
-    if (post.tags) {
-      matchString = `${post.tags.join(' ')} ${matchString}`
-    }
-
-    matchString = `${post.text} ${matchString}`.replace('\n', ' ')
-
-    this.matchPatterns.forEach((pattern) => {
-      if (matchString.match(pattern) !== null) {
-        match = true
-      }
-    })
-
-    this.matchTerms.forEach((term) => {
-      if (matchString.match(term) !== null) {
-        match = true
-      }
-    })
-
-    this.matchUsers.forEach((user) => {
-      if (matchString.match(user) !== null) {
-        match = true
-      }
-    })
-
-    // commenting it because of rate limits
-    // const details = await getUserDetails(post.author, this.agent)
-    // matchDescription = `${details.description} ${details.displayName}`.replace('\n', ' ')
-
-    this.matchTerms.forEach((term) => {
-      if (matchDescription.match(term) !== null) {
-        match = true
-      }
-    })
-
-    return match
+    // Combine match checks
+    return (
+      this.matchPatterns.some(pattern => lowerCaseMatchString.match(pattern))
+    );
   }
 }

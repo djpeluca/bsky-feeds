@@ -37,7 +37,7 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
 export class manager extends AlgoManager {
   public name: string = shortname
 
-  public matchTerms: string[] = [
+  public matchPatterns: RegExp[] = [
     '#Salesforce',
     '#DF23',
     'Salesforce',
@@ -57,7 +57,6 @@ export class manager extends AlgoManager {
     'Trailhead',
     'Agent Force',
     'Agentforce',
-    'DF24',
     'DF25',
     'DX25',
     'DubaiDreamin',
@@ -73,12 +72,8 @@ export class manager extends AlgoManager {
     'Sales GPT',
     'Einstein Vision AI',
     'Salesblazer',
-  ]
-
-  public matchPatterns: RegExp[] = [
-    /(^|[\s\W])Salesforce($|[\W\s])/im,
-    /(^|[\s\W])Dreamforce($|[\W\s])/im,
-  ]
+    'foodforce',
+  ].map(term => new RegExp(`(^|[\\s\\W])${term}($|[\\W\\s])`, 'im'));
 
   // Include Argentinian users here to always include their posts
   public matchUsers: string[] = [
@@ -106,61 +101,20 @@ export class manager extends AlgoManager {
 
     let match = false
 
-    let matchString = ''
-    let matchDescription = ''
+    // Build matchString from post properties
+    const matchString = [
+      post.embed?.images?.map(image => image.alt).join(' ') ?? '',
+      post.embed?.alt ?? '',
+      post.embed?.media?.alt ?? '',
+      post.tags?.join(' ') ?? '',
+      post.text
+    ].join(' ');
 
-    if (post.embed?.images) {
-      const imagesArr = post.embed.images
-      imagesArr.forEach((image) => {
-        matchString = `${matchString} ${image.alt}`.replace('\n', ' ')
-      })
-    }
+    const lowerCaseMatchString = matchString.toLowerCase();
 
-    if (post.embed?.alt) {
-      matchString = `${matchString} ${post.embed.alt}`.replace('\n', ' ')
-    }
-
-    if (post.embed?.media?.alt) {
-      matchString = `${matchString} ${post.embed?.media?.alt}`.replace(
-        '\n',
-        ' ',
-      )
-    }
-
-    if (post.tags) {
-      matchString = `${post.tags.join(' ')} ${matchString}`
-    }
-
-    matchString = `${post.text} ${matchString}`.replace('\n', ' ')
-
-    this.matchPatterns.forEach((pattern) => {
-      if (matchString.match(pattern) !== null) {
-        match = true
-      }
-    })
-
-    this.matchTerms.forEach((term) => {
-      if (matchString.match(term) !== null) {
-        match = true
-      }
-    })
-
-    this.matchUsers.forEach((user) => {
-      if (matchString.match(user) !== null) {
-        match = true
-      }
-    })
-
-    // commenting it because of rate limits
-    // const details = await getUserDetails(post.author, this.agent)
-    // matchDescription = `${details.description} ${details.displayName}`.replace('\n', ' ')
-
-    this.matchTerms.forEach((term) => {
-      if (matchDescription.match(term) !== null) {
-        match = true
-      }
-    })
-
-    return match
+    // Combine match checks
+    return (
+      this.matchPatterns.some(pattern => lowerCaseMatchString.match(pattern))
+    );
   }
 }
