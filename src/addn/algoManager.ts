@@ -29,7 +29,7 @@ export class AlgoManager {
 
   public async _start() {
     if (this._isStarting) return false
-    this._isStarting = true
+    else this._isStarting = true
 
     const taskIntervalMins = Math.max(
       1,
@@ -52,6 +52,7 @@ export class AlgoManager {
     runPeriodicTask();
 
     await this.start()
+
     this._isReady = true
     return this._isReady
   }
