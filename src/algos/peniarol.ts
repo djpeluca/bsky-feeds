@@ -145,6 +145,9 @@ export class manager extends AlgoManager {
     /(^|[\s\W])padre y decano($|[\W\s])/im,
     /(^|[\s\W])padreydecano($|[\W\s])/im,
     /(^|[\s\W])Diego Aguirre($|[\W\s])/im,
+    /(^|[\s\W])Diego Aguirre($|[\W\s])/im,
+    /(^|[\s\W])💛🖤($|[\W\s])/im,
+    /(^|[\s\W])🖤💛($|[\W\s])/im,  
   ]
 
   // Include Peñarol users here to always include their posts
