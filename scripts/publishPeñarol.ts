@@ -25,7 +25,7 @@ const run = async () => {
 
   // (Optional) A description of your feed
   // Ex: Top trending content from the whole network
-  const description = 'ClLub Atlético Peñarol - 28 de setiembre de 1981 - 🏆 5️⃣ Libertadores 🏆 3️⃣ Intercontinentales 🏆 5️⃣3️4️⃣ Campeonatos 🇺🇾 🌎 Campeón Del Siglo XX en América 📱#VamosCarbonero - Uruguay'
+  const description = 'ClLub Atlético Peñarol - 28 de setiembre de 1981 - \n🏆 5️⃣ Libertadores \n🏆 3️⃣ Intercontinentales \n🏆 5️⃣4️⃣ Campeonatos 🇺🇾 \n🌎 Campeón Del Siglo XX en América \n#VamosCarbonero - Uruguay'
 
   // (Optional) The path to an image to be used as your feed's avatar
   // Ex: ~/path/to/avatar.jpeg
