@@ -8,7 +8,7 @@ export class AlgoManager {
 
   public db: Database
   public agent: Agent
-  public periodicIntervalId: NodeJS.Timer
+  public periodicIntervalId: NodeJS.Timer | null = null
 
   public name: string = ''
 
@@ -29,27 +29,32 @@ export class AlgoManager {
 
   public async _start() {
     if (this._isStarting) return false
-    else this._isStarting = true
+    this._isStarting = true
 
-    const taskIntervalMins = Math.max(
-      1,
-      Number.parseInt(process.env.FEEDGEN_TASK_INTEVAL_MINS || '15') || 15
-    ) * 60 * 1000;
+    dotenv.config()
 
-    await this.periodicTask();
+    let taskIntervalMins = 15
+    if (
+      process.env.FEEDGEN_TASK_INTEVAL_MINS !== undefined &&
+      Number.parseInt(process.env.FEEDGEN_TASK_INTEVAL_MINS) > 0
+    ) {
+      taskIntervalMins = Number.parseInt(process.env.FEEDGEN_TASK_INTEVAL_MINS)
+    }
+
+    await this.periodicTask()
 
     const runPeriodicTask = async () => {
-      console.log(`${this.name}: running ${taskIntervalMins / 60000}m task`);
+      console.log(`${this.name}: running ${taskIntervalMins}m task`)
       try {
-        await this.periodicTask();
+        await this.periodicTask()
       } catch (e) {
-        console.error(`${this.name}: error running periodic task ${e.message}`);
+        console.log(`${this.name}: error running periodic task ${e.message}`)
       } finally {
-        this.periodicIntervalId = setTimeout(runPeriodicTask, taskIntervalMins);
+        this.periodicIntervalId = setTimeout(runPeriodicTask, taskIntervalMins * 60 * 1000)
       }
-    };
+    }
 
-    runPeriodicTask();
+    runPeriodicTask() // Start the first execution
 
     await this.start()
 
@@ -63,7 +68,7 @@ export class AlgoManager {
 
   public async ready(): Promise<Boolean> {
     if (this._isReady) return this._isReady
-    else return await this._start()
+    return await this._start()
   }
 
   public async periodicTask() {
