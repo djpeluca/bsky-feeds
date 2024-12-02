@@ -34,20 +34,22 @@ export class AlgoManager {
     const taskIntervalMins = Math.max(
       1,
       Number.parseInt(process.env.FEEDGEN_TASK_INTEVAL_MINS || '15') || 15
-    )
+    ) * 60 * 1000;
 
-    await this.periodicTask()
+    await this.periodicTask();
 
-    if (!this.periodicIntervalId) {
-      this.periodicIntervalId = setInterval(async () => {
-        console.log(`${this.name}: running ${taskIntervalMins}m task`)
-        try {
-          await this.periodicTask()
-        } catch (e) {
-          console.error(`${this.name}: error running periodic task ${e.message}`)
-        }
-      }, taskIntervalMins * 60 * 1000)
-    }
+    const runPeriodicTask = async () => {
+      console.log(`${this.name}: running ${taskIntervalMins / 60000}m task`);
+      try {
+        await this.periodicTask();
+      } catch (e) {
+        console.error(`${this.name}: error running periodic task ${e.message}`);
+      } finally {
+        this.periodicIntervalId = setTimeout(runPeriodicTask, taskIntervalMins);
+      }
+    };
+
+    runPeriodicTask();
 
     await this.start()
     this._isReady = true
