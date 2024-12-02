@@ -29,27 +29,34 @@ export class AlgoManager {
 
   public async _start() {
     if (this._isStarting) return false
-    this._isStarting = true
+    else this._isStarting = true
 
-    const taskIntervalMins = Math.max(
-      1,
-      Number.parseInt(process.env.FEEDGEN_TASK_INTEVAL_MINS || '15') || 15
-    )
+    dotenv.config()
+
+    let task_inverval_mins = 15
+    if (
+      process.env.FEEDGEN_TASK_INTEVAL_MINS !== undefined &&
+      Number.parseInt(process.env.FEEDGEN_TASK_INTEVAL_MINS) > 0
+    ) {
+      task_inverval_mins = Number.parseInt(
+        process.env.FEEDGEN_TASK_INTEVAL_MINS,
+      )
+    }
 
     await this.periodicTask()
-
     if (!this.periodicIntervalId) {
-      this.periodicIntervalId = setInterval(async () => {
-        console.log(`${this.name}: running ${taskIntervalMins}m task`)
+      this.periodicIntervalId = setInterval(() => {
+        console.log(`${this.name}: running ${task_inverval_mins}m task`)
         try {
-          await this.periodicTask()
+          this.periodicTask()
         } catch (e) {
-          console.error(`${this.name}: error running periodic task ${e.message}`)
+          console.log(`${this.name}: error running periodic task ${e.message}`)
         }
-      }, taskIntervalMins * 60 * 1000)
+      }, task_inverval_mins * 60 * 1000)
     }
 
     await this.start()
+
     this._isReady = true
     return this._isReady
   }
