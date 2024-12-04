@@ -37,8 +37,10 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
 export class manager extends AlgoManager {
   public name: string = shortname
 
+
+
   public matchPatterns: RegExp[] = [
-    /(?!uruguaiana)(?:urugua|uruguash|montevid|charrua|🇺🇾|punta del este|yorugua|U R U G U A Y|eleccionesuy|Jose Mujica|Jos[eé] Mujica|Pepe Mujica|Carolina Cosse|Yamandu Orsi|Yamand[uú] Orsi|[aá]lvaro Delgado|Blanca Rodriguez|Blanca Rodr[ií]guez|Alvaro Delgado|Valeria Ripoll|Lacalle Pou|Batllismo|Willsonismo|Herrerismo|Batllista|Willsonista|herrerista|peñarol|Parque Rod[oó]|Parque Rodo|chivito)\w*/,
+    /(?!uruguaiana)(?:urugua|uruguash|montevid|charrua|🇺🇾|punta del este|yorugua|U R U G U A Y|eleccionesuy|Jos[eé] Mujica|Pepe Mujica|Carolina Cosse|Yamand[uú] Orsi|[aá]lvaro Delgado|Blanca Rodr[ií]gue|Valeria Ripoll|Lacalle Pou|Batllismo|Willsonismo|Herrerismo|Batllista|Willsonista|herrerista|peñarol|Parque Rod[oó]|Parque Rodo)\w*/,
     /(^|[\s\W])Colonia del Sacramento($|[\W\s])/im,
     /(^|[\s\W])Cabo Polonio($|[\W\s])/im,
     /(^|[\s\W])Piri[aá]polis($|[\W\s])/im,
@@ -118,6 +120,60 @@ export class manager extends AlgoManager {
     /(^|[\s\W])🧉($|[\W\s])/im,
   ]
 
+  
+  // Define matchPatterns as a class member
+  public matchPatterns2: RegExp[] = [
+    '🇦🇷',
+    'Argent',
+    'TwitterArg',
+    'Buenos Aires',
+    'Malvinas',
+    'Maradona',
+    'conourbano',
+    'Tierra del Fuego',
+    'Gualeguaych[úu]',
+    'Capital Federal',
+    'Puerto Madero',
+    'Patagonia',
+    'Kirchner',
+    'Alberto Fernandez',
+    'Milei',
+    'Cyberciruja',
+    'Lionel Messi',
+    'Eva Per[óo]n',
+    'Evita Per[óo]n',
+    'Domingo Per[óo]n',
+    'Juan Per[óo]n',
+    'Per[óo]nia',
+    'Per[óo]nismo',
+    'Jorge Luis Borges',
+    'Mercedes Sosa',
+    'Carlos Gardel',
+    'La Bombonera',
+    'Monumental de Nuñez',
+    'Casa Rosada',
+    'Perito Moreno',
+    'San Mart[ií]n de los Andes',
+    'Victoria Villarruel',
+    'Sergio Massa',
+    'Larreta', 
+    'Patricia Bullrich',
+    'Pato Bullrich',
+    'Cris Morena',
+    'Spreen',
+    'Colapinto',
+    'Jorge Rial',
+    'Susana Gimenez',
+    'Caputo',
+    'Kicillof',
+    'Macri',
+  ].map(term => new RegExp(`(^|[\\s\\W])${term}($|[\\W\\s])`, 'im'));
+
+  public finalMatchPatterns: RegExp[] = [
+    ...this.matchPatterns,
+    ...this.matchPatterns2,
+  ]
+
   // Include Argentinian users here to always include their posts
   public matchUsers: string[] = [
     //
@@ -129,35 +185,51 @@ export class manager extends AlgoManager {
   ]
 
   public async periodicTask() {
-    await this.db.removeTagFromOldPosts(
-      this.name,
-      new Date().getTime() - 7 * 24 * 60 * 60 * 1000,
-    )
+    // Only run cleanup if necessary
+    const oneWeekAgo = new Date().getTime() - 7 * 24 * 60 * 60 * 1000;
+    await this.db.removeTagFromOldPosts(this.name, oneWeekAgo);
   }
 
   public async filter_post(post: Post): Promise<Boolean> {
-    if (post.author === 'did:plc:mcb6n67plnrlx4lg35natk2b') return false // sorry nowbreezing.ntw.app
+    // Exclude specific user
+    if (post.author === 'did:plc:mcb6n67plnrlx4lg35natk2b') return false;
+
+    // Ensure agent is initialized
     if (this.agent === null) {
-      await this.start()
+      await this.start();
     }
-    if (this.agent === null) return false
+    if (this.agent === null) return false;
 
-    let match = false
+    // Build matchString from relevant post properties
+    const matchStringParts: string[] = [];
 
-    // Build matchString from post properties
-    const matchString = [
-      post.embed?.images?.map(image => image.alt).join(' ') ?? '',
-      post.embed?.alt ?? '',
-      post.embed?.media?.alt ?? '',
-      post.tags?.join(' ') ?? '',
-      post.text
-    ].join(' ');
+    // Collect relevant strings in a single pass
+    if (post.embed?.images) {
+      matchStringParts.push(...post.embed.images.map(image => image.alt));
+    }
+    if (post.embed?.alt) {
+      matchStringParts.push(post.embed.alt);
+    }
+    if (post.embed?.media?.alt) {
+      matchStringParts.push(post.embed.media.alt);
+    }
+    if (post.tags) {
+      matchStringParts.push(...post.tags);
+    }
+    if (post.text) {
+      matchStringParts.push(post.text);
+    }
 
-    const lowerCaseMatchString = matchString.toLowerCase();
+    // Join all parts into a single matchString and convert to lower case
+    const matchString = matchStringParts.join(' ').toLowerCase();
 
-    // Combine match checks
-    return (
-      this.matchPatterns.some(pattern => lowerCaseMatchString.match(pattern))
-    );
+    // Combine match checks using finalMatchPatterns
+    // Use a for loop for early exit on match
+    for (const pattern of this.finalMatchPatterns) {
+      if (pattern.test(matchString)) {
+        return true; // Early exit on first match
+      }
+    }
+    return false; // No matches found
   }
 }
