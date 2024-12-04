@@ -33,7 +33,7 @@ export class AlgoManager {
 
     dotenv.config()
 
-    let taskIntervalMins = Number.parseInt(process.env.FEEDGEN_TASK_INTEVAL_MINS) || 15
+    let taskIntervalMins = Number.parseInt(process.env.FEEDGEN_TASK_INTEVAL_MINS || '15')
 
     await this.periodicTask()
 
