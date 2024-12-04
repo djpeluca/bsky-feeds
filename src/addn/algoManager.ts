@@ -8,7 +8,7 @@ export class AlgoManager {
 
   public db: Database
   public agent: Agent
-  public periodicIntervalId: NodeJS.Timer
+  public periodicIntervalId: NodeJS.Timer | null = null
 
   public name: string = ''
 
@@ -33,7 +33,13 @@ export class AlgoManager {
 
     dotenv.config()
 
-    let taskIntervalMins = Number.parseInt(process.env.FEEDGEN_TASK_INTEVAL_MINS || '15')
+    let taskIntervalMins = 15
+    if (
+      process.env.FEEDGEN_TASK_INTEVAL_MINS !== undefined &&
+      Number.parseInt(process.env.FEEDGEN_TASK_INTEVAL_MINS) > 0
+    ) {
+      taskIntervalMins = Number.parseInt(process.env.FEEDGEN_TASK_INTEVAL_MINS)
+    }
 
     await this.periodicTask()
 
@@ -48,7 +54,7 @@ export class AlgoManager {
       }
     }
 
-    this.periodicIntervalId = setTimeout(runPeriodicTask, taskIntervalMins * 60 * 1000)
+    runPeriodicTask() // Start the first execution
 
     await this.start()
 
@@ -62,7 +68,7 @@ export class AlgoManager {
 
   public async ready(): Promise<Boolean> {
     if (this._isReady) return this._isReady
-    else return await this._start()
+    return await this._start()
   }
 
   public async periodicTask() {
