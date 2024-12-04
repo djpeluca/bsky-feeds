@@ -124,7 +124,9 @@ export class manager extends AlgoManager {
   // Define matchPatterns as a class member
   public matchPatterns2: RegExp[] = [
     '🇦🇷',
-    'Argent',
+    'Argenti',
+    'Argento',
+    'Argenta',
     'TwitterArg',
     'Buenos Aires',
     'Malvinas',
@@ -164,7 +166,6 @@ export class manager extends AlgoManager {
     'Colapinto',
     'Jorge Rial',
     'Susana Gimenez',
-    'Caputo',
     'Kicillof',
     'Macri',
   ].map(term => new RegExp(`(^|[\\s\\W])${term}($|[\\W\\s])`, 'im'));
