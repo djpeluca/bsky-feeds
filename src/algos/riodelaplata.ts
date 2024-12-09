@@ -100,7 +100,6 @@ export class manager extends AlgoManager {
     /(^|[\s\W])ñeri($|[\W\s])/im,
     /(^|[\s\W])nieri($|[\W\s])/im,
     /(^|[\s\W])Level Uy($|[\W\s])/im,
-    /(^|[\s\W])Argent($|[\W\s])/im,
     /(^|[\s\W])Buenos Aires($|[\W\s])/im,
     /(^|[\s\W])Malvinas($|[\W\s])/im,
     /(^|[\s\W])Maradona($|[\W\s])/im,
