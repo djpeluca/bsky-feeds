@@ -12,15 +12,15 @@
   resolved "https://registry.yarnpkg.com/@atcute/client/-/client-2.0.6.tgz#5a2cc0e879c1b897e2770613c50836f5866f5800"
   integrity sha512-mhdqEicGUx0s5HTFOLpz91rcLS9j/g63de0nmAqv7blhU3j+xBf4le54qr2YIXNfnReZI7EwLYLX/YIBez4LGA==
 
-"@atproto/api@^0.13.11":
-  version "0.13.11"
-  resolved "https://registry.yarnpkg.com/@atproto/api/-/api-0.13.11.tgz#936664d9b57686840231fbab222e19abbe3f93c9"
-  integrity sha512-YW+4WzZEGGj/SDYo9w+S2PkSaeSS+8Dosk21GFm4EFYq1eq7G0cxuMgvdcq6fov7f9zqsaTFQL2fA6cAgMA0ow==
+"@atproto/api@^0.13.20":
+  version "0.13.20"
+  resolved "https://registry.yarnpkg.com/@atproto/api/-/api-0.13.20.tgz#5140db303c3b0981958dfe6a5fa6d7d1cd7bb3cc"
+  integrity sha512-z/+CvG6BEttRHf856tKSe1AeUQNfrobRJldaHAthGmFk7O3wLZQyfcI9DUmBJQ9+4wAt0dZwvKWVGLZOV9eLHA==
   dependencies:
     "@atproto/common-web" "^0.3.1"
-    "@atproto/lexicon" "^0.4.2"
-    "@atproto/syntax" "^0.3.0"
-    "@atproto/xrpc" "^0.6.3"
+    "@atproto/lexicon" "^0.4.4"
+    "@atproto/syntax" "^0.3.1"
+    "@atproto/xrpc" "^0.6.5"
     await-lock "^2.2.2"
     multiformats "^9.9.0"
     tlds "^1.234.0"
@@ -36,7 +36,19 @@
     uint8arrays "3.0.0"
     zod "^3.23.8"
 
-"@atproto/common@^0.4.2", "@atproto/common@^0.4.4":
+"@atproto/common@^0.4.1":
+  version "0.4.5"
+  resolved "https://registry.yarnpkg.com/@atproto/common/-/common-0.4.5.tgz#28fd176a9b5527c723828e725586bc0be9fa9516"
+  integrity sha512-LFAGqHcxCI5+b31Xgk+VQQtZU258iGPpHJzNeHVcdh6teIKZi4C2l6YV+m+3CEz+yYcfP7jjUmgqesx7l9Arsg==
+  dependencies:
+    "@atproto/common-web" "^0.3.1"
+    "@ipld/dag-cbor" "^7.0.3"
+    cbor-x "^1.5.1"
+    iso-datestring-validator "^2.2.2"
+    multiformats "^9.9.0"
+    pino "^8.21.0"
+
+"@atproto/common@^0.4.4":
   version "0.4.4"
   resolved "https://registry.yarnpkg.com/@atproto/common/-/common-0.4.4.tgz#79096aef920f5ad7cda5c682d7ed7416d0581e1a"
   integrity sha512-58tMbn6A1Zu296s/l3uIj8z9d7IRHpZvLOfsFRikaQaYrzhJpL2aPY4uFQ8GJcxnsxeUnxBCrQz9we5jVVJI5Q==
@@ -66,13 +78,13 @@
     "@atproto/crypto" "^0.4.1"
     axios "^0.27.2"
 
-"@atproto/lexicon@^0.4.1", "@atproto/lexicon@^0.4.2":
-  version "0.4.2"
-  resolved "https://registry.yarnpkg.com/@atproto/lexicon/-/lexicon-0.4.2.tgz#fcc92cdb82ae248b034b172763d6dbadfb00a829"
-  integrity sha512-CXoOkhcdF3XVUnR2oNgCs2ljWfo/8zUjxL5RIhJW/UNLp/FSl+KpF8Jm5fbk8Y/XXVPGRAsv9OYfxyU/14N/pw==
+"@atproto/lexicon@^0.4.1", "@atproto/lexicon@^0.4.2", "@atproto/lexicon@^0.4.4":
+  version "0.4.4"
+  resolved "https://registry.yarnpkg.com/@atproto/lexicon/-/lexicon-0.4.4.tgz#0d97314bb57b693b76f2495fa5e02872469dd93a"
+  integrity sha512-QFEmr3rpj/RoAmfX9ALU/asBG/rsVtQZnw+9nOB1/AuIwoxXd+ZyndR6lVUc2+DL4GEjl6W2yvBru5xbQIZWyA==
   dependencies:
     "@atproto/common-web" "^0.3.1"
-    "@atproto/syntax" "^0.3.0"
+    "@atproto/syntax" "^0.3.1"
     iso-datestring-validator "^2.2.2"
     multiformats "^9.9.0"
     zod "^3.23.8"
@@ -92,10 +104,10 @@
     uint8arrays "3.0.0"
     zod "^3.23.8"
 
-"@atproto/syntax@^0.3.0":
-  version "0.3.0"
-  resolved "https://registry.yarnpkg.com/@atproto/syntax/-/syntax-0.3.0.tgz#fafa2dbea9add37253005cb663e7373e05e618b3"
-  integrity sha512-Weq0ZBxffGHDXHl9U7BQc2BFJi/e23AL+k+i5+D9hUq/bzT4yjGsrCejkjq0xt82xXDjmhhvQSZ0LqxyZ5woxA==
+"@atproto/syntax@^0.3.0", "@atproto/syntax@^0.3.1":
+  version "0.3.1"
+  resolved "https://registry.yarnpkg.com/@atproto/syntax/-/syntax-0.3.1.tgz#4346418728f9643d783d2ffcf7c77e132e1f53d4"
+  integrity sha512-fzW0Mg1QUOVCWUD3RgEsDt6d1OZ6DdFmbKcDdbzUfh0t4rhtRAC05KbZYmxuMPWDAiJ4BbbQ5dkAc/mNypMXkw==
 
 "@atproto/xrpc-server@^0.7.1":
   version "0.7.1"
@@ -115,12 +127,12 @@
     ws "^8.12.0"
     zod "^3.23.8"
 
-"@atproto/xrpc@^0.6.3":
-  version "0.6.3"
-  resolved "https://registry.yarnpkg.com/@atproto/xrpc/-/xrpc-0.6.3.tgz#5942fc24644ad182b913af526efaa06a43d89478"
-  integrity sha512-S3tRvOdA9amPkKLll3rc4vphlDitLrkN5TwWh5Tu/jzk7mnobVVE3akYgICV9XCNHKjWM+IAPxFFI2qi+VW6nQ==
+"@atproto/xrpc@^0.6.3", "@atproto/xrpc@^0.6.5":
+  version "0.6.5"
+  resolved "https://registry.yarnpkg.com/@atproto/xrpc/-/xrpc-0.6.5.tgz#8b180fc5f6b8374fd00c41b9e4cd7b24ead48e6b"
+  integrity sha512-t6u8iPEVbWge5RhzKZDahSzNDYIAxUtop6Q/X/apAZY1rgreVU0/1sSvvRoRFH19d3UIKjYdLuwFqMi9w8nY3Q==
   dependencies:
-    "@atproto/lexicon" "^0.4.2"
+    "@atproto/lexicon" "^0.4.4"
     zod "^3.23.8"
 
 "@cbor-extract/cbor-extract-darwin-arm64@2.2.0":
