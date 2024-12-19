@@ -53,8 +53,6 @@ export class manager extends AlgoManager {
   }
 
   public matchPatterns: RegExp[] = [
-    /(^|[\s\W])Uruguay($|[\W\s])/im,
-    /(^|[\s\W])Montevideo($|[\W\s])/im,
     /(?!uruguaiana)(?:urugua|uruguash|montevid|charrua|🇺🇾|punta del este|yorugua|U R U G U A Y|eleccionesuy|Jose Mujica|Jos[eé] Mujica|Pepe Mujica|Carolina Cosse|Yamandu Orsi|Yamand[uú] Orsi|[aá]lvaro Delgado|Blanca Rodriguez|Blanca Rodr[ií]guez|Alvaro Delgado|Valeria Ripoll|Lacalle Pou|Batllismo|Willsonismo|Herrerismo|Batllista|Willsonista|herrerista|peñarol|Parque Rod[oó]|Parque Rodo|chivito)\w*/,
     /(^|[\s\W])Colonia del Sacramento($|[\W\s])/im,
     /(^|[\s\W])Cabo Polonio($|[\W\s])/im,
@@ -81,7 +79,6 @@ export class manager extends AlgoManager {
     /(^|[\s\W])Sayago($|[\W\s])/im,
     /(^|[\s\W])Jacinto Vera($|[\W\s])/im,
     /(^|[\s\W])Villa Dolores($|[\W\s])/im,
-    /(^|[\s\W])Piedras Blancas($|[\W\s])/im,
     /(^|[\s\W])Las Acacias($|[\W\s])/im,
     /(^|[\s\W])Nuevo Par[ií]s($|[\W\s])/im,
     /(^|[\s\W])Flor de Maroñas($|[\W\s])/im,
@@ -106,7 +103,6 @@ export class manager extends AlgoManager {
     /(^|[\s\W])Tabar[eé] V[aá]zquez($|[\W\s])/im,
     /(^|[\s\W])Luis Lacalle Pou($|[\W\s])/im,
     /(^|[\s\W])Julio Mar[ií]a Sanguinetti($|[\W\s])/im,
-    /(^|[\s\W])#Balotaje2024($|[\W\s])/im,
     /(^|[\s\W])#UruguayDecide($|[\W\s])/im,
     /(^|[\s\W])#BalotajeUy($|[\W\s])/im,
     /(^|[\s\W])#OrsiPresidente($|[\W\s])/im,

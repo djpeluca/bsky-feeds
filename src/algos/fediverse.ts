@@ -4,7 +4,6 @@ import { AlgoManager } from '../addn/algoManager'
 import dotenv from 'dotenv'
 import { Post } from '../db/schema'
 import dbClient from '../db/dbClient'
-import getUserDetails from '../addn/getUserDetails'
 
 dotenv.config()
 
@@ -43,9 +42,10 @@ export class manager extends AlgoManager {
     'mastodon',
     'pixelfed',
     'activitypub',
-    'ActivityPub',
+    'ActivityStream',
     'misskey',
     'pleroma',
+    'Akkoma',
     'friendica',
     'funkwhale',
     'gnu social',
@@ -53,6 +53,15 @@ export class manager extends AlgoManager {
     'diaspora',
     'hubzilla',
     'firefish',
+    'Fedifollow',
+    'WebFinger',
+    'Fediblock',
+    'Kbin',
+    'RFC 9227',
+    'RFC9227',
+    'RFC 3987',
+    'RFC3987',
+    'Internationalized Resource Identifier',
    ].map(term => new RegExp(`(^|[\\s\\W])${term}($|[\\W\\s])`, 'im'));
 
 
@@ -74,7 +83,7 @@ export class manager extends AlgoManager {
   }
 
   public async filter_post(post: Post): Promise<Boolean> {
-    if (post.author === 'did:plc:mcb6n67plnrlx4lg35natk2b') return false // sorry nowbreezing.ntw.app
+    if (post.author === 'did:plc:mcb6n67plnrlx4lg35natk2b' || post.author === 'did:plc:zwxl6dnun52q3ywiao2ad3if') return false // sorry nowbreezing.ntw.app and FlipboardBR.flipboard.com.ap.brid.gy
     if (this.agent === null) {
       await this.start()
     }
