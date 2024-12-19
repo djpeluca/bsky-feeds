@@ -68,7 +68,6 @@ export class manager extends AlgoManager {
     /(^|[\s\W])Sayago($|[\W\s])/im,
     /(^|[\s\W])Jacinto Vera($|[\W\s])/im,
     /(^|[\s\W])Villa Dolores($|[\W\s])/im,
-    /(^|[\s\W])Piedras Blancas($|[\W\s])/im,
     /(^|[\s\W])Las Acacias($|[\W\s])/im,
     /(^|[\s\W])Nuevo Par[ií]s($|[\W\s])/im,
     /(^|[\s\W])Flor de Maroñas($|[\W\s])/im,

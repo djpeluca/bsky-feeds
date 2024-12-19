@@ -4,7 +4,6 @@ import { AlgoManager } from '../addn/algoManager'
 import dotenv from 'dotenv'
 import { Post } from '../db/schema'
 import dbClient from '../db/dbClient'
-import getUserDetails from '../addn/getUserDetails'
 
 dotenv.config()
 
@@ -56,7 +55,7 @@ export class manager extends AlgoManager {
     'Kirchner',
     'Alberto Fernandez',
     'Milei',
-    'Cyberciruja',
+    'Cyberciruj',
     'Lionel Messi',
     'Eva Per[óo]n',
     'Evita Per[óo]n',
