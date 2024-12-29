@@ -41,20 +41,12 @@ export class manager extends AlgoManager {
     '#Salesforce',
     '#DF23',
     'Salesforce',
-    '$CRM',
-    'Marketing Cloud',
-    'Sales Cloud',
-    'Media Cloud',
-    'Automotive Cloud',
-    'Commerce Cloud',
     'Data Cloud',
     '#SalesforceSaturday',
     '#TrailblazerCommunity',
     'Salesforce+',
-    'Marc Benioff',
     'Dreamforce',
     'AwesomeAdmin',
-    'Trailhead',
     'Agent Force',
     'Agentforce',
     'DF25',
@@ -65,7 +57,6 @@ export class manager extends AlgoManager {
     'DD24',
     'sfdx',
     'sfdc',
-    'AI Specialist',
     'Einstein Conversation Insights',
     'MuleSoft',
     'Hyperforce',
@@ -93,7 +84,7 @@ export class manager extends AlgoManager {
   }
 
   public async filter_post(post: Post): Promise<Boolean> {
-    if (post.author === 'did:plc:mcb6n67plnrlx4lg35natk2b') return false // sorry nowbreezing.ntw.app
+    if (post.author === 'did:plc:mcb6n67plnrlx4lg35natk2b' || post.author === 'did:plc:pcpvhedjrmiu2x6hwe33qpvm' || post.author === 'did:plc:pdvjdejvjinix4lnt4sgzg7r') return false // sorry nowbreezing.ntw.app
     if (this.agent === null) {
       await this.start()
     }
