@@ -98,6 +98,8 @@ export class manager extends AlgoManager {
     /(^|[\s\W])Rub[eé]n Rada($|[\W\s])/im,
     /(^|[\s\W])Jorge Drexler($|[\W\s])/im,
     /(^|[\s\W])China Zorrilla($|[\W\s])/im,
+    /(^|[\s\W])Fede [aá]lvarez($|[\W\s])/im,
+    /(^|[\s\W])Fede Vigevani($|[\W\s])/im,
     /(^|[\s\W])Daniel Hendler($|[\W\s])/im,
     /(^|[\s\W])Jos[eé] Mujica($|[\W\s])/im,
     /(^|[\s\W])Tabar[eé] V[aá]zquez($|[\W\s])/im,
@@ -109,7 +111,6 @@ export class manager extends AlgoManager {
     /(^|[\s\W])ñeri($|[\W\s])/im,
     /(^|[\s\W])nieri($|[\W\s])/im,
     /(^|[\s\W])Level Uy($|[\W\s])/im,
-    /(^|[\s\W])Orsi($|[\W\s])/im,
     /(^|[\s\W])Yamand[úu]($|[\W\s])/im,
     /(^|[\s\W])udelar($|[\W\s])/im,
     /(^|[\s\W])Universidad de la rep[uú]blica]($|[\W\s])/im,
@@ -120,13 +121,14 @@ export class manager extends AlgoManager {
     /(^|[\s\W])cndf($|[\W\s])/im,
     /(^|[\s\W])Antel($|[\W\s])/im,
     /(^|[\s\W])Sodre($|[\W\s])/im,
+
   ]
 
   // Include Uruguayan users here to always include their posts
   public matchUsers: string[] = []
 
   // Exclude posts from these users
-  public bannedUsers: string[] = [
+  public bannedUsers: string[] = ['did:plc:fkjimovpp2u3vfnsdpc22wmt', 'did:plc:jktb4n6uqe5jzebfcwxme2rs', 'did:plc:ipjddtox7rdarhgvxkxqvswd'
     //
   ]
 
@@ -215,6 +217,10 @@ export class manager extends AlgoManager {
     const authorSet = new Set(this.authorList);
     if (authorSet.has(post.author)) {
       return true; // Skip pattern matching for these posts
+    }
+
+    if (post.author in this.bannedUsers) {
+      return false;
     }
 
     // Build matchString from post properties
