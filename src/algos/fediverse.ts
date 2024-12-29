@@ -43,7 +43,6 @@ export class manager extends AlgoManager {
     'pixelfed',
     'activitypub',
     'ActivityStream',
-    'misskey',
     'pleroma',
     'Akkoma',
     'friendica',
