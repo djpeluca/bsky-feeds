@@ -77,7 +77,6 @@ export class manager extends AlgoManager {
     /(^|[\s\W])Santiago Miguel Ben[ií]tez Hegui($|[\W\s])/im,
     /(^|[\s\W])Sergio Dami[aá]n Garc[ií]a Graña($|[\W\s])/im,
     /(^|[\s\W])Peñarol($|[\W\s])/im,
-    /(^|[\s\W])Carbonero($|[\W\s])/im,
     /(^|[\s\W])Manyas($|[\W\s])/im,
     /(^|[\s\W])Mirasoles($|[\W\s])/im,
     /(^|[\s\W])Aurinegro($|[\W\s])/im,
@@ -180,7 +179,7 @@ export class manager extends AlgoManager {
   }
 
   public async filter_post(post: Post): Promise<Boolean> {
-    if (post.author === 'did:plc:mcb6n67plnrlx4lg35natk2b') return false // sorry nowbreezing.ntw.app
+    if (post.author === 'did:plc:mcb6n67plnrlx4lg35natk2b' || post.author === 'did:plc:tm7k52cskl64b5tplme5wy6l') return false // sorry nowbreezing.ntw.app
     if (this.agent === null) {
       await this.start()
     }
