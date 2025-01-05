@@ -154,8 +154,9 @@ export class manager extends AlgoManager {
       const blocked_members: string[] = await getListMembers(
         process.env.BLOCKLIST,
         this.agent,
-      )
-      list_members = list_members.filter(member => !blocked_members.includes(member))
+      );
+      // Filter out blocked members from list_members
+      list_members = list_members.filter(member => !blocked_members.includes(member));
     }
 
     // Fetch all distinct authors in one go
@@ -219,8 +220,9 @@ export class manager extends AlgoManager {
       return true; // Skip pattern matching for these posts
     }
 
-    if (post.author in this.bannedUsers) {
-      return false;
+    // Corrected banned users check
+    if (this.bannedUsers.includes(post.author)) {
+      return false; // Corrected check for banned users
     }
 
     // Build matchString from post properties
