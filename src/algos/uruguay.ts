@@ -44,6 +44,7 @@ export class manager extends AlgoManager {
   public name: string = shortname
   private authorList: string[] = []
   public author_collection = 'list_members'
+  private blocked_members: string[] = []
 
   public async start() {
     this.authorList = await dbClient.getDistinctFromCollection(
@@ -145,9 +146,8 @@ export class manager extends AlgoManager {
     let list_members = [...new Set(allMembers.flat())];
 
     // Handle blocked members
-    let blocked_members: string[] = [];
     if (process.env.BLOCKLIST) {
-      blocked_members = await getListMembers(
+      this.blocked_members = await getListMembers(
         process.env.BLOCKLIST,
         this.agent,
       );
@@ -181,7 +181,7 @@ export class manager extends AlgoManager {
 
     for (const [index, new_author] of new_authors.entries()) {
       const posts = allPosts[index];
-      const validPosts = await Promise.all(posts.map(async post => (await this.filter_post(post, blocked_members)) ? post : null));
+      const validPosts = await Promise.all(posts.map(async post => (await this.filter_post(post)) ? post : null));
 
       // Filter out null values
       const filteredPosts = validPosts.filter(post => post !== null);
@@ -202,21 +202,21 @@ export class manager extends AlgoManager {
     }
   }
 
-  public async filter_post(post: Post, blocked_members: string[]): Promise<Boolean> {
+  public async filter_post(post: Post): Promise<Boolean> {
     if (this.agent === null) {
       await this.start();
       if (this.agent === null) return false; // Early return if agent is still null
+    }
+
+    // Check if the post author is in the blocked members list
+    if (this.blocked_members.includes(post.author)) {
+      return false; // Block the post
     }
 
     // Use Set for faster lookups
     const authorSet = new Set(this.authorList);
     if (authorSet.has(post.author)) {
       return true; // Skip pattern matching for these posts
-    }
-
-    // Check if the post's author is in the blocked members list
-    if (blocked_members.includes(post.author)) {
-      return false; // Exclude posts from blocked members
     }
 
     // Build matchString from post properties
