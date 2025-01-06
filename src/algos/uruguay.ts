@@ -127,11 +127,6 @@ export class manager extends AlgoManager {
   // Include Uruguayan users here to always include their posts
   public matchUsers: string[] = []
 
-  // Exclude posts from these users
-  public bannedUsers: string[] = ['did:plc:fkjimovpp2u3vfnsdpc22wmt', 'did:plc:jktb4n6uqe5jzebfcwxme2rs', 'did:plc:ipjddtox7rdarhgvxkxqvswd'
-    //
-  ]
-
   public async periodicTask() {
     dotenv.config()
 
@@ -150,13 +145,12 @@ export class manager extends AlgoManager {
     let list_members = [...new Set(allMembers.flat())];
 
     // Handle blocked members
+    let blocked_members: string[] = [];
     if (process.env.BLOCKLIST) {
-      const blocked_members: string[] = await getListMembers(
+      blocked_members = await getListMembers(
         process.env.BLOCKLIST,
         this.agent,
       );
-      // Filter out blocked members from list_members
-      list_members = list_members.filter(member => !blocked_members.includes(member));
     }
 
     // Fetch all distinct authors in one go
@@ -187,7 +181,7 @@ export class manager extends AlgoManager {
 
     for (const [index, new_author] of new_authors.entries()) {
       const posts = allPosts[index];
-      const validPosts = await Promise.all(posts.map(async post => (await this.filter_post(post)) ? post : null));
+      const validPosts = await Promise.all(posts.map(async post => (await this.filter_post(post, blocked_members)) ? post : null));
 
       // Filter out null values
       const filteredPosts = validPosts.filter(post => post !== null);
@@ -208,7 +202,7 @@ export class manager extends AlgoManager {
     }
   }
 
-  public async filter_post(post: Post): Promise<Boolean> {
+  public async filter_post(post: Post, blocked_members: string[]): Promise<Boolean> {
     if (this.agent === null) {
       await this.start();
       if (this.agent === null) return false; // Early return if agent is still null
@@ -220,9 +214,9 @@ export class manager extends AlgoManager {
       return true; // Skip pattern matching for these posts
     }
 
-    // Corrected banned users check
-    if (this.bannedUsers.includes(post.author)) {
-      return false; // Corrected check for banned users
+    // Check if the post's author is in the blocked members list
+    if (blocked_members.includes(post.author)) {
+      return false; // Exclude posts from blocked members
     }
 
     // Build matchString from post properties
