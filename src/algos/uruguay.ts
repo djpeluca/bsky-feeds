@@ -147,10 +147,10 @@ export class manager extends AlgoManager {
 
     // Handle blocked members
     if (process.env.BLOCKLIST) {
-      this.blocked_members = await getListMembers(
-        process.env.BLOCKLIST,
-        this.agent,
-      );
+      const blockLists: string[] = `${process.env.BLOCKLIST}`.split('|');
+      const blockedMembersPromises = blockLists.map(list => getListMembers(list, this.agent));
+      const allBlockedMembers = await Promise.all(blockedMembersPromises);
+      this.blocked_members = [...new Set(allBlockedMembers.flat())];
     }
 
     // Fetch all distinct authors in one go
