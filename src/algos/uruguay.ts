@@ -40,7 +40,7 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
   };
 };
 
-export class Manager extends AlgoManager {
+export class manager extends AlgoManager {
   public name: string = shortname;
   private authorList: Set<string> = new Set();
   public author_collection = 'list_members';
@@ -176,14 +176,14 @@ export class Manager extends AlgoManager {
 
       const bulkOps: any[] = [];
 
-// Prepare bulk operations for valid posts
-validPosts.forEach((post) => {
-  if (post !== null) {
-    bulkOps.push({
-      insertOne: { document: post },
-    });
-  }
-});
+      // Prepare bulk operations for valid posts
+      validPosts.forEach((post) => {
+        if (post !== null) {
+          bulkOps.push({
+            insertOne: { document: post },
+          });
+        }
+      });
 
       // Add an operation to update or insert the new author
       bulkOps.push({
