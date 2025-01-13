@@ -53,7 +53,7 @@ export class manager extends AlgoManager {
     )
   }
 
-  public matchPattern: RegExp = new RegExp(
+  public matchPatterns: RegExp = new RegExp(
     `(^|[\\s\\W])(${[
       '🇦🇷',
       'Argenti',
