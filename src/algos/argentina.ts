@@ -1,57 +1,44 @@
-import { QueryParams } from '../lexicon/types/app/bsky/feed/getFeedSkeleton'
-import { AppContext } from '../config'
-import { AlgoManager } from '../addn/algoManager'
-import dotenv from 'dotenv'
-import getListMembers from '../addn/getListMembers'
-import setListMembers from '../addn/setListMembers'
-import getPostsForUser from '../addn/getPostsForUser'
-import resoveDIDToHandle from '../addn/resolveDIDToHandle'
-import { Post } from '../db/schema'
-import dbClient from '../db/dbClient'
-import getUserDetails from '../addn/getUserDetails'
-import { AppBskyGraphDefs } from '@atproto/api'
-import getUserLists from '../addn/getUserLists'
+import { QueryParams } from '../lexicon/types/app/bsky/feed/getFeedSkeleton';
+import { AppContext } from '../config';
+import { AlgoManager } from '../addn/algoManager';
+import dotenv from 'dotenv';
+import getListMembers from '../addn/getListMembers';
+import getPostsForUser from '../addn/getPostsForUser';
+import dbClient from '../db/dbClient';
 
-dotenv.config()
+dotenv.config();
 
 // max 15 chars
-export const shortname = 'argentina'
+export const shortname = 'argentina';
 
 export const handler = async (ctx: AppContext, params: QueryParams) => {
   const builder = await dbClient.getLatestPostsForTag({
     tag: shortname,
     limit: params.limit,
     cursor: params.cursor,
-  })
+  });
 
   let feed = builder.map((row) => ({
     post: row.uri,
-  }))
+  }));
 
-  let cursor: string | undefined
-  const last = builder.at(-1)
+  let cursor;
+  const last = builder.at(-1);
   if (last) {
-    cursor = `${new Date(last.indexedAt).getTime()}::${last.cid}`
+    cursor = `${new Date(last.indexedAt).getTime()}::${last.cid}`;
   }
 
   return {
     cursor,
     feed,
-  }
-}
+  };
+};
 
 export class manager extends AlgoManager {
-  public name: string = shortname
-  private authorList: string[] = []
-  public author_collection = 'list_members'
-  private blocked_members: string[] = []
-
-  public async start() {
-    this.authorList = await dbClient.getDistinctFromCollection(
-      this.author_collection,
-      'did',
-    )
-  }
+  public name: string = shortname;
+  private authorList: Set<string> = new Set();
+  public author_collection = 'list_members';
+  private blocked_members: Set<string> = new Set();
 
   public matchPatterns: RegExp[] = [
     '🇦🇷',
@@ -99,72 +86,72 @@ export class manager extends AlgoManager {
     'Susana Gimenez',
     'Kicillof',
     'Macri',
-  ].map(term => new RegExp(`(^|[\\s\\W])${term}($|[\\W\\s])`, 'im'));
-  
-  
+  ].map((term) => new RegExp(`(^|[\s\W])${term}($|[\W\s])`, 'im'));
 
-  // Include Argentinian users here to always include their posts
-  public matchUsers: string[] = []
+  public async start() {
+    const authors = await dbClient.getDistinctFromCollection(this.author_collection, 'did');
+    this.authorList = new Set(authors);
+  }
 
   public async periodicTask() {
-    dotenv.config()
+    dotenv.config();
 
     await this.db.removeTagFromOldPosts(
       this.name,
-      Date.now() - 7 * 24 * 60 * 60 * 1000,
+      Date.now() - 7 * 24 * 60 * 60 * 1000
     );
 
-    if (this.authorList === undefined) {
-      await this.start()
+    if (this.authorList.size === 0) {
+      await this.start();
     }
 
-    const lists: string[] = `${process.env.ARGENTINA_LISTS}`.split('|');
-    const listMembersPromises = lists.map(list => getListMembers(list, this.agent));
-    const allMembers = await Promise.all(listMembersPromises);
-    let list_members = [...new Set(allMembers.flat())];
+    const lists = process.env.ARGENTINA_LISTS?.split('|') || [];
+    const blockLists = process.env.BLOCKLIST?.split('|') || [];
 
-    // Handle blocked members
-    if (process.env.BLOCKLIST) {
-      const blockLists: string[] = `${process.env.BLOCKLIST}`.split('|');
-      const blockedMembersPromises = blockLists.map(list => getListMembers(list, this.agent));
-      const allBlockedMembers = await Promise.all(blockedMembersPromises);
-      this.blocked_members = [...new Set(allBlockedMembers.flat())];
-    }
+    const [listMembers, blockedMembers] = await Promise.all([
+      Promise.all(lists.map((list) => getListMembers(list, this.agent))).then((results) =>
+        new Set(results.flat())
+      ),
+      Promise.all(blockLists.map((list) => getListMembers(list, this.agent))).then((results) =>
+        new Set(results.flat())
+      ),
+    ]);
 
-    // Fetch all distinct authors in one go
-    const db_authors = await dbClient.getDistinctFromCollection(
-      this.author_collection,
-      'did',
+    this.blocked_members = blockedMembers;
+
+    const db_authors = new Set(
+      await dbClient.getDistinctFromCollection(this.author_collection, 'did')
     );
 
-    // Use Set for faster lookups
-    const authorSet = new Set(db_authors);
-    const new_authors = list_members.filter(member => !authorSet.has(member));
-    const del_authors = db_authors.filter(member => !list_members.includes(member));
+    const new_authors = Array.from(listMembers).filter((member) => !db_authors.has(member));
+    const del_authors = Array.from(db_authors).filter((member) => !listMembers.has(member));
 
-    // Update authorList in one go
-    this.authorList = [...list_members];
+    this.authorList = listMembers;
 
-    // Remove tags for deleted authors in bulk
     if (del_authors.length > 0) {
       await this.db.deleteManyDID(this.author_collection, del_authors);
     }
 
-    // Fetch all posts for new authors in a single call
-    const allPostsPromises = new_authors.map(new_author => getPostsForUser(new_author, this.agent));
-    let allPosts = await Promise.all(allPostsPromises);
+    const allPosts = await Promise.all(
+      new_authors.map((author) => getPostsForUser(author, this.agent))
+    );
 
-    // Declare bulkOps array to hold operations
-    let bulkOps: any[] = [];
+    const bulkOps: any[] = [];
 
     for (const [index, new_author] of new_authors.entries()) {
-      const posts = allPosts[index];
-      const validPosts = await Promise.all(posts.map(async post => (await this.filter_post(post)) ? post : null));
+      const posts = allPosts[index] || [];
+      const validPosts = await Promise.all(
+        posts.map((post) => this.filter_post(post).then((isValid) => (isValid ? post : null)))
+      );
 
-      // Filter out null values
-      const filteredPosts = validPosts.filter(post => post !== null);
+      validPosts.forEach((post) => {
+        if (post !== null) {
+          bulkOps.push({
+            insertOne: { document: post },
+          });
+        }
+      });
 
-      // Prepare bulk operation for author updates
       bulkOps.push({
         updateOne: {
           filter: { did: new_author },
@@ -174,39 +161,34 @@ export class manager extends AlgoManager {
       });
     }
 
-    // Execute bulk operations for posts
     if (bulkOps.length > 0) {
-      await this.db.bulkWrite('post', bulkOps);
+      try {
+        await this.db.bulkWrite('post', bulkOps);
+      } catch (err) {
+        console.error('Bulk write error:', err);
+      }
     }
   }
 
-  public async filter_post(post: Post): Promise<Boolean> {
-    if (this.agent === null) {
-      await this.start();
-      if (this.agent === null) return false; // Early return if agent is still null
+  public async filter_post(post: Post): Promise<boolean> {
+    if (this.blocked_members.has(post.author)) {
+      return false;
     }
 
-    // Check if the post author is in the blocked members list
-    if (this.blocked_members.includes(post.author)) {
-      return false; // Block the post
+    if (this.authorList.has(post.author)) {
+      return true;
     }
 
-    // Use Set for faster lookups
-    const authorSet = new Set(this.authorList);
-    if (authorSet.has(post.author)) {
-      return true; // Skip pattern matching for these posts
-    }
-
-    // Build matchString from post properties
     const matchString = [
-      post.embed?.images?.map(image => image.alt).join(' ') ?? '',
-      post.embed?.alt ?? '',
-      post.embed?.media?.alt ?? '',
-      post.tags?.join(' ') ?? '',
-      post.text
-    ].join(' ').toLowerCase(); // Convert to lower case once
+      post.embed?.images?.map((image) => image.alt).join(' ') || '',
+      post.embed?.alt || '',
+      post.embed?.media?.alt || '',
+      post.tags?.join(' ') || '',
+      post.text || '',
+    ]
+      .join(' ')
+      .toLowerCase();
 
-    // Combine match checks
-    return this.matchPatterns.some(pattern => pattern.test(matchString));
+    return this.matchPatterns.some((pattern) => pattern.test(matchString));
   }
 }
