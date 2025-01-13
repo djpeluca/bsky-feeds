@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import getListMembers from '../addn/getListMembers';
 import getPostsForUser from '../addn/getPostsForUser';
 import dbClient from '../db/dbClient';
+import { Post } from '../db/schema';
 
 dotenv.config();
 
