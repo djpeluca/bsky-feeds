@@ -345,27 +345,17 @@ class dbSingleton {
     
     const pullQuery: Record<string, any> = { algoTags: { $in: [tag] } };
 
-    // Find documents that match the criteria
-    const documents = await this.client
+    // Only update documents where algoTags is an array
+    await this.client
       .db()
       .collection('post')
-      .find({ indexedAt: { $lt: indexedAt } })
-      .toArray() as unknown as Array<{ _id: string; algoTags: string[]; author: string }>;
-
-    // Iterate through the documents to check if 'algoTags' is an array
-    for (const doc of documents) {
-      if (Array.isArray(doc.algoTags)) {
-        await this.client
-          .db()
-          .collection('post')
-          .updateMany(
-            { indexedAt: { $lt: indexedAt }, author: doc.author },
-            { $pull: pullQuery }
-          );
-      } else {
-        console.warn(`Field 'algoTags' is not an array for document: ${doc._id}`);
-      }
-    }
+      .updateMany(
+        { 
+          indexedAt: { $lt: indexedAt },
+          algoTags: { $type: 'array' }  // Only match if algoTags is an array
+        },
+        { $pull: pullQuery }
+      );
 
     await this.deleteUntaggedPosts();
   }
