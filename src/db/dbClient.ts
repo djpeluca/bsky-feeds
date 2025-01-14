@@ -350,12 +350,11 @@ class dbSingleton {
       .db()
       .collection('post')
       .find({ indexedAt: { $lt: indexedAt } })
-      .toArray();
+      .toArray() as unknown as Array<{ _id: string; algoTags: string[]; author: string }>;
 
     // Iterate through the documents to check if 'algoTags' is an array
     for (const doc of documents) {
       if (Array.isArray(doc.algoTags)) {
-        // Proceed with the pull operation if 'algoTags' is an array
         await this.client
           .db()
           .collection('post')
