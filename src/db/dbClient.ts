@@ -341,24 +341,26 @@ class dbSingleton {
   }
 
   async removeTagFromOldPosts(tag: string, indexedAt: number) {
+    if (!this.client) throw new Error('DB client is not initialized');
+    
     const pullQuery: Record<string, any> = { algoTags: { $in: [tag] } };
 
     // Find documents that match the criteria
     const documents = await this.client
-      ?.db()
+      .db()
       .collection('post')
       .find({ indexedAt: { $lt: indexedAt } })
-      .toArray() ?? [];
+      .toArray();
 
     // Iterate through the documents to check if 'algoTags' is an array
     for (const doc of documents) {
       if (Array.isArray(doc.algoTags)) {
         // Proceed with the pull operation if 'algoTags' is an array
         await this.client
-          ?.db()
+          .db()
           .collection('post')
           .updateMany(
-            { indexedAt: { $lt: indexedAt }, author: doc.author }, // Adjust the query as needed
+            { indexedAt: { $lt: indexedAt }, author: doc.author },
             { $pull: pullQuery }
           );
       } else {
