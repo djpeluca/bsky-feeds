@@ -5,6 +5,7 @@ import dotenv from 'dotenv'
 import { Post } from '../db/schema'
 import dbClient from '../db/dbClient'
 import getUserDetails from '../addn/getUserDetails'
+import { getListMembers } from '../addn/getListMembers'
 
 dotenv.config()
 
@@ -37,13 +38,10 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
 export class manager extends AlgoManager {
   public name: string = shortname
 
-  public matchPatterns: RegExp[] = [
-    /(?!uruguaiana)(?:urugua|uruguash|montevid|charrua|🇺🇾|punta del este|yorugua|U R U G U A Y|eleccionesuy|Jos[eé] Mujica|Pepe Mujica|Carolina Cosse|Yamand[uú] Orsi|[aá]lvaro Delgado|Blanca Rodr[ií]gue|Valeria Ripoll|Lacalle Pou|Batllismo|Willsonismo|Herrerismo|Batllista|Willsonista|herrerista|peñarol|Parque Rod[oó]|Parque Rodo)\w*/,
-    /(^|[\s\W])🇦🇷($|[\W\s])/im,
-    /(^|[\s\W])Argenti\w*($|[\W\s])/im,
-    /(^|[\s\W])Argento($|[\W\s])/im,
-    /(^|[\s\W])Argenta($|[\W\s])/im,
-    /(^|[\s\W])TwitterArg($|[\W\s])/im,
+  // Cache the compiled patterns
+  private readonly compiledPatterns: RegExp[] = [
+    /(?!uruguaiana)(?:urugua|uruguash|montevid|charrua|🇺🇾|punta del este|yorugua|U R U G U A Y|eleccionesuy)\w*/i,
+    /(?:argenti|argento|argenta|🇦🇷|TwitterArg)\w*/i,
     /(^|[\s\W])Buenos Aires($|[\W\s])/im,
     /(^|[\s\W])Malvinas($|[\W\s])/im,
     /(^|[\s\W])Maradona($|[\W\s])/im,
@@ -149,7 +147,7 @@ export class manager extends AlgoManager {
     /(^|[\s\W])🧉($|[\W\s])/im,
   ]
 
-  public finalMatchPatterns: RegExp[] = this.matchPatterns;
+  public finalMatchPatterns: RegExp[] = this.compiledPatterns;
 
   // Include Argentinian users here to always include their posts
   public matchUsers: string[] = [
@@ -161,34 +159,53 @@ export class manager extends AlgoManager {
     //
   ]
 
+  private whitelistedAuthors = new Set<string>();
+  private blacklistedAuthors = new Set<string>();
+
+  public async start() {
+    // Get whitelist members
+    if (process.env.URUGUAY_LISTS) {
+      const lists: string[] = `${process.env.URUGUAY_LISTS}`.split('|');
+      const listMembersPromises = lists.map(list => getListMembers(list, this.agent));
+      const allMembers = await Promise.all(listMembersPromises);
+      this.whitelistedAuthors = new Set(allMembers.flat());
+    }
+
+    // Get blacklist members
+    if (process.env.BLOCKLIST) {
+      const blockLists: string[] =  `${process.env.BLOCKLIST}`.split('|');
+      const blockedMembersPromises = blockLists.map(list => getListMembers(list, this.agent));
+      const allBlockedMembers = await Promise.all(blockedMembersPromises);
+      this.blacklistedAuthors = new Set(allBlockedMembers.flat());
+    }
+  }
+
   public async periodicTask() {
-    await this.db.removeTagFromOldPosts(
-      this.name,
-      new Date().getTime() - 7 * 24 * 60 * 60 * 1000,
-    )
+    try {
+      const twoWeeksAgo = new Date().getTime() - 14 * 24 * 60 * 60 * 1000;
+      await this.db.removeTagFromOldPosts(this.name, twoWeeksAgo);
+    } catch (error) {
+      console.error(`Error in ${this.name} periodicTask:`, error);
+    }
   }
 
   public async filter_post(post: Post): Promise<Boolean> {
-    if (post.author === 'did:plc:mcb6n67plnrlx4lg35natk2b') return false // sorry nowbreezing.ntw.app
-    if (this.agent === null) {
-      await this.start()
-    }
-    if (this.agent === null) return false
+    // Quick author checks first
+    if (this.whitelistedAuthors.has(post.author)) return true;
+    if (this.blacklistedAuthors.has(post.author)) return false;
 
-    // Build matchString from post properties
+    if (!this.agent) return false;
+
+    // Optimize string concatenation
     const matchString = [
-      post.embed?.images?.map(image => image.alt).join(' ') ?? '',
-      post.embed?.alt ?? '',
-      post.embed?.media?.alt ?? '',
-      post.tags?.join(' ') ?? '',
+      ...(post.embed?.images?.map(img => img.alt) || []),
+      post.embed?.alt,
+      post.embed?.media?.alt,
+      ...(post.tags || []),
       post.text
-    ].join(' ');
+    ].filter(Boolean).join(' ').toLowerCase();
 
-    const lowerCaseMatchString = matchString.toLowerCase();
-
-    // Combine match checks
-    return (
-      this.matchPatterns.some(pattern => lowerCaseMatchString.match(pattern))
-    );
+    // Use cached patterns and early return
+    return this.compiledPatterns.some(pattern => pattern.test(matchString));
   }
 }
