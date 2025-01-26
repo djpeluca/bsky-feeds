@@ -163,20 +163,34 @@ export class manager extends AlgoManager {
   private blacklistedAuthors = new Set<string>();
 
   public async start() {
-    // Get whitelist members
-    if (process.env.URUGUAY_LISTS) {
-      const lists: string[] = `${process.env.URUGUAY_LISTS}`.split('|');
-      const listMembersPromises = lists.map(list => getListMembers(list, this.agent));
-      const allMembers = await Promise.all(listMembersPromises);
-      this.whitelistedAuthors = new Set(allMembers.flat());
-    }
+    console.log(`${this.name}: Starting riodelaplata algorithm`);
+    try {
+      // Get whitelist members
+      if (process.env.URUGUAY_LISTS) {
+        const lists: string[] = `${process.env.URUGUAY_LISTS}`.split('|');
+        console.log(`${this.name}: Processing ${lists.length} whitelist lists:`, lists);
+        const listMembersPromises = lists.map(list => getListMembers(list, this.agent));
+        const allMembers = await Promise.all(listMembersPromises);
+        this.whitelistedAuthors = new Set(allMembers.flat());
+        console.log(`${this.name}: Added ${this.whitelistedAuthors.size} whitelisted authors`);
+      } else {
+        console.log(`${this.name}: No URUGUAY_LISTS environment variable found`);
+      }
 
-    // Get blacklist members
-    if (process.env.BLOCKLIST) {
-      const blockLists: string[] =  `${process.env.BLOCKLIST}`.split('|');
-      const blockedMembersPromises = blockLists.map(list => getListMembers(list, this.agent));
-      const allBlockedMembers = await Promise.all(blockedMembersPromises);
-      this.blacklistedAuthors = new Set(allBlockedMembers.flat());
+      // Get blacklist members
+      if (process.env.BLOCKLIST) {
+        const blockLists: string[] = `${process.env.BLOCKLIST}`.split('|');
+        console.log(`${this.name}: Processing ${blockLists.length} block lists:`, blockLists);
+        const blockedMembersPromises = blockLists.map(list => getListMembers(list, this.agent));
+        const allBlockedMembers = await Promise.all(blockedMembersPromises);
+        this.blacklistedAuthors = new Set(allBlockedMembers.flat());
+        console.log(`${this.name}: Added ${this.blacklistedAuthors.size} blacklisted authors`);
+      } else {
+        console.log(`${this.name}: No BLOCKLIST environment variable found`);
+      }
+    } catch (error) {
+      console.error(`${this.name}: Error in start():`, error);
+      throw error; // Re-throw to ensure startup fails properly
     }
   }
 
@@ -191,10 +205,19 @@ export class manager extends AlgoManager {
 
   public async filter_post(post: Post): Promise<Boolean> {
     // Quick author checks first
-    if (this.whitelistedAuthors.has(post.author)) return true;
-    if (this.blacklistedAuthors.has(post.author)) return false;
+    if (this.whitelistedAuthors.has(post.author)) {
+      console.log(`${this.name}: Post accepted - whitelisted author ${post.author}`);
+      return true;
+    }
+    if (this.blacklistedAuthors.has(post.author)) {
+      console.log(`${this.name}: Post rejected - blacklisted author ${post.author}`);
+      return false;
+    }
 
-    if (!this.agent) return false;
+    if (!this.agent) {
+      console.log(`${this.name}: Post rejected - no agent available`);
+      return false;
+    }
 
     // Optimize string concatenation
     const matchString = [
@@ -206,6 +229,10 @@ export class manager extends AlgoManager {
     ].filter(Boolean).join(' ').toLowerCase();
 
     // Use cached patterns and early return
-    return this.compiledPatterns.some(pattern => pattern.test(matchString));
+    const matches = this.compiledPatterns.some(pattern => pattern.test(matchString));
+    if (matches) {
+      console.log(`${this.name}: Post accepted - matched pattern in: ${matchString.substring(0, 100)}...`);
+    }
+    return matches;
   }
 }
