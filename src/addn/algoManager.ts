@@ -78,27 +78,4 @@ export class AlgoManager {
   public async filter_post(post: Post): Promise<Boolean> {
     return false
   }
-
-  protected async retryWithBackoff<T>(
-    fn: () => Promise<T>,
-    maxRetries: number = 3,
-    initialDelay: number = 1000
-  ): Promise<T> {
-    let retries = 0;
-    let delay = initialDelay;
-
-    while (true) {
-      try {
-        return await fn();
-      } catch (error: any) {
-        if (retries >= maxRetries || !error?.error?.includes('rate limit')) {
-          throw error;
-        }
-
-        retries++;
-        await new Promise(resolve => setTimeout(resolve, delay));
-        delay *= 2; // Exponential backoff
-      }
-    }
-  }
 }
