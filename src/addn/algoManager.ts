@@ -28,37 +28,27 @@ export class AlgoManager {
   }
 
   public async _start() {
-    if (this._isStarting) {
-      console.log(`${this.name}: Already starting`);
-      return false;
-    }
-    console.log(`${this.name}: Starting algorithm manager`);
-    this._isStarting = true;
+    if (this._isStarting) return false
+    this._isStarting = true
 
     dotenv.config()
 
-    let taskIntervalMins = 15;
+    let taskIntervalMins = 15
     if (
       process.env.FEEDGEN_TASK_INTEVAL_MINS !== undefined &&
       Number.parseInt(process.env.FEEDGEN_TASK_INTEVAL_MINS) > 0
     ) {
       taskIntervalMins = Number.parseInt(process.env.FEEDGEN_TASK_INTEVAL_MINS)
     }
-    console.log(`${this.name}: Task interval set to ${taskIntervalMins} minutes`);
 
-    try {
-      console.log(`${this.name}: Running initial periodic task`);
-      await this.periodicTask()
-    } catch (e) {
-      console.error(`${this.name}: Error in initial periodic task:`, e);
-    }
+    await this.periodicTask()
 
     const runPeriodicTask = async () => {
       console.log(`${this.name}: running ${taskIntervalMins}m task`)
       try {
         await this.periodicTask()
       } catch (e) {
-        console.error(`${this.name}: error running periodic task:`, e)
+        console.log(`${this.name}: error running periodic task ${e.message}`)
       } finally {
         this.periodicIntervalId = setTimeout(runPeriodicTask, taskIntervalMins * 60 * 1000)
       }
@@ -66,15 +56,9 @@ export class AlgoManager {
 
     runPeriodicTask() // Start the first execution
 
-    try {
-      console.log(`${this.name}: Running start() method`);
-      await this.start()
-    } catch (e) {
-      console.error(`${this.name}: Error in start():`, e);
-    }
+    await this.start()
 
-    this._isReady = true;
-    console.log(`${this.name}: Algorithm manager ready`);
+    this._isReady = true
     return this._isReady
   }
 
