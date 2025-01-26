@@ -13,26 +13,31 @@ dotenv.config()
 export const shortname = 'riodelaplata'
 
 export const handler = async (ctx: AppContext, params: QueryParams) => {
+  console.log(`${shortname}: Handler called with params:`, params);
+  
   const builder = await dbClient.getLatestPostsForTag({
     tag: shortname,
     limit: params.limit,
     cursor: params.cursor,
-  })
+  });
+
+  console.log(`${shortname}: Found ${builder.length} posts from DB`);
 
   let feed = builder.map((row) => ({
     post: row.uri,
-  }))
+  }));
 
-  let cursor: string | undefined
-  const last = builder.at(-1)
+  let cursor: string | undefined;
+  const last = builder.at(-1);
   if (last) {
-    cursor = `${new Date(last.indexedAt).getTime()}::${last.cid}`
+    cursor = `${new Date(last.indexedAt).getTime()}::${last.cid}`;
+    console.log(`${shortname}: Set cursor to ${cursor}`);
   }
 
   return {
     cursor,
     feed,
-  }
+  };
 }
 
 export class manager extends AlgoManager {
@@ -196,14 +201,18 @@ export class manager extends AlgoManager {
 
   public async periodicTask() {
     try {
+      console.log(`${this.name}: Starting periodic task`);
       const twoWeeksAgo = new Date().getTime() - 14 * 24 * 60 * 60 * 1000;
-      await this.db.removeTagFromOldPosts(this.name, twoWeeksAgo);
+      const result = await this.db.removeTagFromOldPosts(this.name, twoWeeksAgo);
+      console.log(`${this.name}: Completed periodic task, removed old posts`);
     } catch (error) {
       console.error(`Error in ${this.name} periodicTask:`, error);
     }
   }
 
   public async filter_post(post: Post): Promise<Boolean> {
+    console.log(`${this.name}: Processing post ${post.uri}`);
+    
     // Quick author checks first
     if (this.whitelistedAuthors.has(post.author)) {
       console.log(`${this.name}: Post accepted - whitelisted author ${post.author}`);
@@ -228,11 +237,17 @@ export class manager extends AlgoManager {
       post.text
     ].filter(Boolean).join(' ').toLowerCase();
 
+    console.log(`${this.name}: Checking patterns against: ${matchString.substring(0, 100)}...`);
+
     // Use cached patterns and early return
-    const matches = this.compiledPatterns.some(pattern => pattern.test(matchString));
-    if (matches) {
-      console.log(`${this.name}: Post accepted - matched pattern in: ${matchString.substring(0, 100)}...`);
+    for (const pattern of this.compiledPatterns) {
+      if (pattern.test(matchString)) {
+        console.log(`${this.name}: Post accepted - matched pattern ${pattern}`);
+        return true;
+      }
     }
-    return matches;
+    
+    console.log(`${this.name}: Post rejected - no patterns matched`);
+    return false;
   }
 }
