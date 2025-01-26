@@ -21,6 +21,7 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
   });
 
   console.log(`${shortname}: Found ${builder.length} posts from DB`);
+  console.log(`${shortname}: First few posts:`, builder.slice(0, 3).map(p => ({ uri: p.uri, cid: p.cid, indexedAt: p.indexedAt })));
 
   let feed = builder.map((row) => ({
     post: row.uri,
@@ -28,9 +29,11 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
 
   let cursor: string | undefined;
   const last = builder.at(-1);
-  if (last) {
+  if (last && last.indexedAt && last.cid) {  // Make sure both values exist
     cursor = `${new Date(last.indexedAt).getTime()}::${last.cid}`;
     console.log(`${shortname}: Set cursor to ${cursor}`);
+  } else {
+    console.warn(`${shortname}: Could not set cursor - missing data:`, { indexedAt: last?.indexedAt, cid: last?.cid });
   }
 
   return {
@@ -173,15 +176,8 @@ export class manager extends AlgoManager {
 
     console.log(`${this.name}: Checking patterns against: ${matchString.substring(0, 100)}...`);
 
-    // Check for Argentina-specific patterns
-    const patterns = [
-      /(?:argenti|argento|argenta|🇦🇷|TwitterArg)\w*/i,
-      /(^|[\s\W])Buenos Aires($|[\W\s])/im,
-      /(^|[\s\W])Malvinas($|[\W\s])/im,
-      // ... add all your Argentina patterns here
-    ];
-
-    for (const pattern of patterns) {
+    // Use the class-level compiledPatterns
+    for (const pattern of this.compiledPatterns) {
       if (pattern.test(matchString)) {
         console.log(`${this.name}: Post accepted - matched pattern ${pattern}`);
         return true;
