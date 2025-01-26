@@ -81,8 +81,7 @@ export class manager extends AlgoManager {
     /(^|[\s\W])Kicillof($|[\W\s])/im,
     /(^|[\s\W])Macri($|[\W\s])/im
   ]
-
-  public finalMatchPatterns: RegExp[] = this.compiledPatterns;
+  
 
   // Include Argentinian users here to always include their posts
   public matchUsers: string[] = [
@@ -99,8 +98,8 @@ export class manager extends AlgoManager {
 
   public async start() {
     // Get whitelist members
-    if (process.env.ARGENTINA_LISTS) {
-      const lists: string[] = `${process.env.ARGENTINA_LISTS}`.split('|');
+    if (process.env.URUGUAY_LISTS) {
+      const lists: string[] = `${process.env.URUGUAY_LISTS}`.split('|');
       const listMembersPromises = lists.map(list => getListMembers(list, this.agent));
       const allMembers = await Promise.all(listMembersPromises);
       this.whitelistedAuthors = new Set(allMembers.flat());
