@@ -79,7 +79,7 @@ export class manager extends AlgoManager {
     /(^|[\s\W])Jorge Rial($|[\W\s])/im,
     /(^|[\s\W])Susana Gimenez($|[\W\s])/im,
     /(^|[\s\W])Kicillof($|[\W\s])/im,
-    /(^|[\s\W])Macri($|[\W\s])/im,
+    /(^|[\s\W])Macri($|[\W\s])/im
   ]
 
   public finalMatchPatterns: RegExp[] = this.compiledPatterns;
