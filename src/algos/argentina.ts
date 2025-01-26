@@ -12,30 +12,35 @@ dotenv.config()
 export const shortname = 'argentina'
 
 export const handler = async (ctx: AppContext, params: QueryParams) => {
+  console.log(`${shortname}: Handler called with params:`, params);
+  
   const builder = await dbClient.getLatestPostsForTag({
     tag: shortname,
     limit: params.limit,
     cursor: params.cursor,
-  })
+  });
+
+  console.log(`${shortname}: Found ${builder.length} posts from DB`);
 
   let feed = builder.map((row) => ({
     post: row.uri,
-  }))
+  }));
 
-  let cursor: string | undefined
-  const last = builder.at(-1)
+  let cursor: string | undefined;
+  const last = builder.at(-1);
   if (last) {
-    cursor = `${new Date(last.indexedAt).getTime()}::${last.cid}`
+    cursor = `${new Date(last.indexedAt).getTime()}::${last.cid}`;
+    console.log(`${shortname}: Set cursor to ${cursor}`);
   }
 
   return {
     cursor,
     feed,
-  }
+  };
 }
 
 export class manager extends AlgoManager {
-  public name: string = shortname
+  public name: string = shortname;
 
   // Cache the compiled patterns
   private readonly compiledPatterns: RegExp[] = [
@@ -97,40 +102,67 @@ export class manager extends AlgoManager {
   private blacklistedAuthors = new Set<string>();
 
   public async start() {
-    // Get whitelist members
-    if (process.env.URUGUAY_LISTS) {
-      const lists: string[] = `${process.env.URUGUAY_LISTS}`.split('|');
-      const listMembersPromises = lists.map(list => getListMembers(list, this.agent));
-      const allMembers = await Promise.all(listMembersPromises);
-      this.whitelistedAuthors = new Set(allMembers.flat());
-    }
+    console.log(`${this.name}: Starting argentina algorithm`);
+    try {
+      // Get whitelist members
+      if (process.env.ARGENTINA_LISTS) {
+        const lists: string[] = `${process.env.ARGENTINA_LISTS}`.split('|');
+        console.log(`${this.name}: Processing ${lists.length} whitelist lists:`, lists);
+        const listMembersPromises = lists.map(list => getListMembers(list, this.agent));
+        const allMembers = await Promise.all(listMembersPromises);
+        this.whitelistedAuthors = new Set(allMembers.flat());
+        console.log(`${this.name}: Added ${this.whitelistedAuthors.size} whitelisted authors`);
+      } else {
+        console.log(`${this.name}: No ARGENTINA_LISTS environment variable found`);
+      }
 
-    // Get blacklist members
-    if (process.env.BLOCKLIST) {
-      const blockLists: string[] =  `${process.env.BLOCKLIST}`.split('|');
-      const blockedMembersPromises = blockLists.map(list => getListMembers(list, this.agent));
-      const allBlockedMembers = await Promise.all(blockedMembersPromises);
-      this.blacklistedAuthors = new Set(allBlockedMembers.flat());
+      // Get blacklist members
+      if (process.env.BLOCKLIST) {
+        const blockLists: string[] = `${process.env.BLOCKLIST}`.split('|');
+        console.log(`${this.name}: Processing ${blockLists.length} block lists:`, blockLists);
+        const blockedMembersPromises = blockLists.map(list => getListMembers(list, this.agent));
+        const allBlockedMembers = await Promise.all(blockedMembersPromises);
+        this.blacklistedAuthors = new Set(allBlockedMembers.flat());
+        console.log(`${this.name}: Added ${this.blacklistedAuthors.size} blacklisted authors`);
+      } else {
+        console.log(`${this.name}: No BLOCKLIST environment variable found`);
+      }
+    } catch (error) {
+      console.error(`${this.name}: Error in start():`, error);
+      throw error;
     }
   }
 
   public async periodicTask() {
     try {
+      console.log(`${this.name}: Starting periodic task`);
       const twoWeeksAgo = new Date().getTime() - 14 * 24 * 60 * 60 * 1000;
       await this.db.removeTagFromOldPosts(this.name, twoWeeksAgo);
+      console.log(`${this.name}: Completed periodic task, removed old posts`);
     } catch (error) {
-      console.error(`Error in ${this.name} periodicTask:`, error);
+      console.error(`${this.name}: Error in periodicTask:`, error);
     }
   }
 
   public async filter_post(post: Post): Promise<Boolean> {
+    console.log(`${this.name}: Processing post ${post.uri}`);
+
     // Quick author checks first
-    if (this.whitelistedAuthors.has(post.author)) return true;
-    if (this.blacklistedAuthors.has(post.author)) return false;
+    if (this.whitelistedAuthors.has(post.author)) {
+      console.log(`${this.name}: Post accepted - whitelisted author ${post.author}`);
+      return true;
+    }
+    if (this.blacklistedAuthors.has(post.author)) {
+      console.log(`${this.name}: Post rejected - blacklisted author ${post.author}`);
+      return false;
+    }
 
-    if (!this.agent) return false;
+    if (!this.agent) {
+      console.log(`${this.name}: Post rejected - no agent available`);
+      return false;
+    }
 
-    // Optimize string concatenation
+    // Build match string from post content
     const matchString = [
       ...(post.embed?.images?.map(img => img.alt) || []),
       post.embed?.alt,
@@ -139,7 +171,24 @@ export class manager extends AlgoManager {
       post.text
     ].filter(Boolean).join(' ').toLowerCase();
 
-    // Use cached patterns and early return
-    return this.compiledPatterns.some(pattern => pattern.test(matchString));
+    console.log(`${this.name}: Checking patterns against: ${matchString.substring(0, 100)}...`);
+
+    // Check for Argentina-specific patterns
+    const patterns = [
+      /(?:argenti|argento|argenta|🇦🇷|TwitterArg)\w*/i,
+      /(^|[\s\W])Buenos Aires($|[\W\s])/im,
+      /(^|[\s\W])Malvinas($|[\W\s])/im,
+      // ... add all your Argentina patterns here
+    ];
+
+    for (const pattern of patterns) {
+      if (pattern.test(matchString)) {
+        console.log(`${this.name}: Post accepted - matched pattern ${pattern}`);
+        return true;
+      }
+    }
+
+    console.log(`${this.name}: Post rejected - no patterns matched`);
+    return false;
   }
 }

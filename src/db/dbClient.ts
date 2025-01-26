@@ -202,10 +202,11 @@ class dbSingleton {
     excludeNSFW?: boolean
     sortOrder?: SortDirection
   }) {
-    let query: { indexedAt?: any; cid?: any; algoTags: string; $and?: any[] } =
-      {
-        algoTags: tag,
-      }
+    console.log(`DB: Getting latest posts for tag ${tag}, limit: ${limit}, cursor: ${cursor}`);
+    
+    let query: { indexedAt?: any; cid?: any; algoTags: string; $and?: any[] } = {
+      algoTags: tag,
+    };
 
     const conditions: any[] = []
 
@@ -258,6 +259,7 @@ class dbSingleton {
       .limit(limit)
       .toArray()
 
+    console.log(`DB: Found ${results?.length || 0} posts for tag ${tag}`);
     return results || []
   }
 
