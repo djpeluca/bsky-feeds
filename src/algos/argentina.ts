@@ -12,28 +12,147 @@ dotenv.config()
 export const shortname = 'argentina'
 
 export const handler = async (ctx: AppContext, params: QueryParams) => {
-  console.log(`${shortname}: Handler called with params:`, params);
-  
   const builder = await dbClient.getLatestPostsForTag({
     tag: shortname,
     limit: params.limit,
     cursor: params.cursor,
   });
 
-  console.log(`${shortname}: Found ${builder.length} posts from DB`);
-  console.log(`${shortname}: First few posts:`, builder.slice(0, 3).map(p => ({ uri: p.uri, cid: p.cid, indexedAt: p.indexedAt })));
-
   let feed = builder.map((row) => ({
     post: row.uri,
   }));
 
-  let cursor: string | undefined;
+  let cursor: string | undefined;import { QueryParams } from '../lexicon/types/app/bsky/feed/getFeedSkeleton'
+  import { AppContext } from '../config'
+  import { AlgoManager } from '../addn/algoManager'
+  import dotenv from 'dotenv'
+  import { Post } from '../db/schema'
+  import dbClient from '../db/dbClient'
+  
+  dotenv.config()
+  
+  // max 15 chars
+  export const shortname = 'argentina'
+  
+  export const handler = async (ctx: AppContext, params: QueryParams) => {
+    const builder = await dbClient.getLatestPostsForTag({
+      tag: shortname,
+      limit: params.limit,
+      cursor: params.cursor,
+    })
+  
+    let feed = builder.map((row) => ({
+      post: row.uri,
+    }))
+  
+    let cursor: string | undefined
+    const last = builder.at(-1)
+    if (last) {
+      cursor = `${new Date(last.indexedAt).getTime()}::${last.cid}`
+    }
+  
+    return {
+      cursor,
+      feed,
+    }
+  }
+  
+  export class manager extends AlgoManager {
+    public name: string = shortname
+  
+    // Define matchPatterns as a class member
+    public matchPatterns: RegExp[] = [
+      '🇦🇷',
+      'Argenti',
+      'Argento',
+      'Argenta',
+      'TwitterArg',
+      'Buenos Aires',
+      'Malvinas',
+      'Maradona',
+      'conourbano',
+      'Tierra del Fuego',
+      'Gualeguaych[úu]',
+      'Capital Federal',
+      'Puerto Madero',
+      'Patagonia',
+      'Kirchner',
+      'Alberto Fernandez',
+      'Milei',
+      'Cyberciruj',
+      'Lionel Messi',
+      'Eva Per[óo]n',
+      'Evita Per[óo]n',
+      'Domingo Per[óo]n',
+      'Juan Per[óo]n',
+      'Per[óo]nia',
+      'Per[óo]nismo',
+      'Jorge Luis Borges',
+      'Mercedes Sosa',
+      'Carlos Gardel',
+      'La Bombonera',
+      'Monumental de Nuñez',
+      'Casa Rosada',
+      'Perito Moreno',
+      'San Mart[ií]n de los Andes',
+      'Victoria Villarruel',
+      'Sergio Massa',
+      'Larreta', 
+      'Patricia Bullrich',
+      'Pato Bullrich',
+      'Cris Morena',
+      'Spreen',
+      'Colapinto',
+      'Jorge Rial',
+      'Susana Gimenez',
+      'Kicillof',
+      'Macri',
+    ].map(term => new RegExp(`(^|[\\s\\W])${term}($|[\\W\\s])`, 'im'));
+  
+    // Include Argentinian users here to always include their posts
+    public matchUsers: string[] = [
+      //
+    ]
+  
+    // Exclude posts from these users
+    public bannedUsers: string[] = [
+      //
+    ]
+  
+    public async periodicTask() {
+      await this.db.removeTagFromOldPosts(
+        this.name,
+        new Date().getTime() - 7 * 24 * 60 * 60 * 1000,
+      )
+    }
+  
+    public async filter_post(post: Post): Promise<Boolean> {
+      if (post.author === 'did:plc:mcb6n67plnrlx4lg35natk2b') return false // sorry nowbreezing.ntw.app
+      if (this.agent === null) {
+        await this.start()
+      }
+      if (this.agent === null) return false
+  
+      // Build matchString from post properties
+      const matchString = [
+        post.embed?.images?.map(image => image.alt).join(' ') ?? '',
+        post.embed?.alt ?? '',
+        post.embed?.media?.alt ?? '',
+        post.tags?.join(' ') ?? '',
+        post.text
+      ].join(' ');
+  
+      const lowerCaseMatchString = matchString.toLowerCase();
+  
+      // Combine match checks
+      return (
+        this.matchPatterns.some(pattern => lowerCaseMatchString.match(pattern))
+      );
+    }
+  }
   const last = builder.at(-1);
-  if (last && last.indexedAt && last.cid) {  // Make sure both values exist
+  if (last) {
     cursor = `${new Date(last.indexedAt).getTime()}::${last.cid}`;
-    console.log(`${shortname}: Set cursor to ${cursor}`);
-  } else {
-    console.warn(`${shortname}: Could not set cursor - missing data:`, { indexedAt: last?.indexedAt, cid: last?.cid });
   }
 
   return {
@@ -148,24 +267,12 @@ export class manager extends AlgoManager {
   }
 
   public async filter_post(post: Post): Promise<Boolean> {
-    console.log(`${this.name}: Processing post ${post.uri}`);
-
     // Quick author checks first
-    if (this.whitelistedAuthors.has(post.author)) {
-      console.log(`${this.name}: Post accepted - whitelisted author ${post.author}`);
-      return true;
-    }
-    if (this.blacklistedAuthors.has(post.author)) {
-      console.log(`${this.name}: Post rejected - blacklisted author ${post.author}`);
-      return false;
-    }
+    if (this.whitelistedAuthors.has(post.author)) return true;
+    if (this.blacklistedAuthors.has(post.author)) return false;
 
-    if (!this.agent) {
-      console.log(`${this.name}: Post rejected - no agent available`);
-      return false;
-    }
+    if (!this.agent) return false;
 
-    // Build match string from post content
     const matchString = [
       ...(post.embed?.images?.map(img => img.alt) || []),
       post.embed?.alt,
@@ -174,17 +281,6 @@ export class manager extends AlgoManager {
       post.text
     ].filter(Boolean).join(' ').toLowerCase();
 
-    console.log(`${this.name}: Checking patterns against: ${matchString.substring(0, 100)}...`);
-
-    // Use the class-level compiledPatterns
-    for (const pattern of this.compiledPatterns) {
-      if (pattern.test(matchString)) {
-        console.log(`${this.name}: Post accepted - matched pattern ${pattern}`);
-        return true;
-      }
-    }
-
-    console.log(`${this.name}: Post rejected - no patterns matched`);
-    return false;
+    return this.compiledPatterns.some(pattern => pattern.test(matchString));
   }
 }
