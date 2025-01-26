@@ -254,7 +254,14 @@ class dbSingleton {
     const results = await this.client
       ?.db()
       .collection('post')
-      .find(query, { projection: { _id: 1, uri: 1, indexedAt: 1 /* other necessary fields */ } })
+      .find(query, { 
+        projection: { 
+          _id: 1, 
+          uri: 1, 
+          cid: 1,
+          indexedAt: 1 
+        } 
+      })
       .sort({ indexedAt: sortOrder, cid: -1 })
       .limit(limit)
       .toArray()
