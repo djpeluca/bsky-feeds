@@ -164,8 +164,8 @@ export class manager extends AlgoManager {
 
   public async start() {
     // Get whitelist members
-    if (process.env.URUGUAY_LISTS) {
-      const lists: string[] = `${process.env.URUGUAY_LISTS}`.split('|');
+    if (process.env.RIO_DE_LA_PLATA_LISTS) {
+      const lists: string[] = `${process.env.RIO_DE_LA_PLATA_LISTS}`.split('|');
       const listMembersPromises = lists.map(list => getListMembers(list, this.agent));
       const allMembers = await Promise.all(listMembersPromises);
       this.whitelistedAuthors = new Set(allMembers.flat());
