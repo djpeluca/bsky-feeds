@@ -211,25 +211,6 @@ export class manager extends AlgoManager {
           console.log(`${this.name}: Rejected post - reply to blocked author ${parentPost.author}`);
           return false;
         }
-        
-        // If we can't find the parent post in our DB, fetch it from the API
-        if (!parentPost && this.agent) {
-          try {
-            const postView = await this.agent.api.app.bsky.feed.getPosts({ 
-              uris: [post.replyParent] 
-            });
-            
-            if (postView.success && postView.data.posts.length > 0) {
-              const parentAuthor = postView.data.posts[0].author.did;
-              if (this.blocked_members.includes(parentAuthor)) {
-                console.log(`${this.name}: Rejected post - reply to blocked author ${parentAuthor}`);
-                return false;
-              }
-            }
-          } catch (error) {
-            console.error(`${this.name}: Error fetching parent post:`, error);
-          }
-        }
       } catch (error) {
         console.error(`${this.name}: Error checking parent post:`, error);
       }
@@ -245,25 +226,6 @@ export class manager extends AlgoManager {
         if (rootPost && this.blocked_members.includes(rootPost.author)) {
           console.log(`${this.name}: Rejected post - reply to thread by blocked author ${rootPost.author}`);
           return false;
-        }
-        
-        // If we can't find the root post in our DB, fetch it from the API
-        if (!rootPost && this.agent) {
-          try {
-            const postView = await this.agent.api.app.bsky.feed.getPosts({ 
-              uris: [post.replyRoot] 
-            });
-            
-            if (postView.success && postView.data.posts.length > 0) {
-              const rootAuthor = postView.data.posts[0].author.did;
-              if (this.blocked_members.includes(rootAuthor)) {
-                console.log(`${this.name}: Rejected post - reply to thread by blocked author ${rootAuthor}`);
-                return false;
-              }
-            }
-          } catch (error) {
-            console.error(`${this.name}: Error fetching root post:`, error);
-          }
         }
       } catch (error) {
         console.error(`${this.name}: Error checking root post:`, error);
