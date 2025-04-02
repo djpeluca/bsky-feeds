@@ -54,30 +54,24 @@ export class manager extends AlgoManager {
   }
 
   public matchPatterns: RegExp[] = [
-    /(?!uruguaiana)(?:urugua|uruguash|montevid|charrua|🇺🇾|punta del este|yorugua|U R U G U A Y|eleccionesuy|Jose Mujica|Jos[eé] Mujica|Pepe Mujica|Carolina Cosse|Yamandu Orsi|Yamand[uú] Orsi|[aá]lvaro Delgado|Blanca Rodriguez|Blanca Rodr[ií]guez|Alvaro Delgado|Valeria Ripoll|Lacalle Pou|Batllismo|Willsonismo|Herrerismo|Batllista|Willsonista|herrerista|peñarol|Parque Rod[oó]|Parque Rodo|chivito)\w*/,
+    /(?!uruguaiana)(?:urugua|montevid|charrua|tacuaremb[oó]|paysand[úu]|semana de turismo|semana de la cerveza|daym[áa]n|guaviyú|arapey|🇺🇾|punta del este|yorugua|U R U G U A Y|Jose Mujica|Jos[eé] Mujica|Pepe Mujica|Carolina Cosse|Yamand[uú] Orsi|[aá]lvaro Delgado|Blanca Rodr[ií]guez|Valeria Ripoll|Lacalle Pou|Batllismo|Willsonismo|Herrerismo|Batllista|Willsonista|herrerista|peñarol|Parque Rod[oó])\w*/,
     /(^|[\s\W])Colonia del Sacramento($|[\W\s])/im,
     /(^|[\s\W])Cabo Polonio($|[\W\s])/im,
     /(^|[\s\W])Piri[aá]polis($|[\W\s])/im,
     /(^|[\s\W])Valizas($|[\W\s])/im,
     /(^|[\s\W])Aguas Dulces($|[\W\s])/im,
     /(^|[\s\W])Laguna Garz[oó]n($|[\W\s])/im,
-    /(^|[\s\W])Ciudad Vieja($|[\W\s])/im,
     /(^|[\s\W])Mercado del Puerto($|[\W\s])/im,
-    /(^|[\s\W])Rambla de Montevideo($|[\W\s])/im,
     /(^|[\s\W])Cerro San Antonio($|[\W\s])/im,
     /(^|[\s\W])Termas del Daym[aá]n($|[\W\s])/im,
     /(^|[\s\W])Salto Grande($|[\W\s])/im,
     /(^|[\s\W])Pocitos($|[\W\s])/im,
     /(^|[\s\W])Punta Carretas($|[\W\s])/im,
     /(^|[\s\W])Malv[ií]n($|[\W\s])/im,
-    /(^|[\s\W])Capurro($|[\W\s])/im,
     /(^|[\s\W])Villa Española($|[\W\s])/im,
-    /(^|[\s\W])Tres Cruces($|[\W\s])/im,
-    /(^|[\s\W])Barrio Sur($|[\W\s])/im,
     /(^|[\s\W])Bañados de Carrasco($|[\W\s])/im,
     /(^|[\s\W])Casab[oó]($|[\W\s])/im,
     /(^|[\s\W])Paso de la Arena($|[\W\s])/im,
-    /(^|[\s\W])Sayago($|[\W\s])/im,
     /(^|[\s\W])Jacinto Vera($|[\W\s])/im,
     /(^|[\s\W])Villa Dolores($|[\W\s])/im,
     /(^|[\s\W])Las Acacias($|[\W\s])/im,
@@ -106,13 +100,8 @@ export class manager extends AlgoManager {
     /(^|[\s\W])Tabar[eé] V[aá]zquez($|[\W\s])/im,
     /(^|[\s\W])Luis Lacalle Pou($|[\W\s])/im,
     /(^|[\s\W])Julio Mar[ií]a Sanguinetti($|[\W\s])/im,
-    /(^|[\s\W])#UruguayDecide($|[\W\s])/im,
-    /(^|[\s\W])#BalotajeUy($|[\W\s])/im,
-    /(^|[\s\W])#OrsiPresidente($|[\W\s])/im,
     /(^|[\s\W])ñeri($|[\W\s])/im,
     /(^|[\s\W])nieri($|[\W\s])/im,
-    /(^|[\s\W])Level Uy($|[\W\s])/im,
-    /(^|[\s\W])Yamand[úu]($|[\W\s])/im,
     /(^|[\s\W])udelar($|[\W\s])/im,
     /(^|[\s\W])Universidad de la rep[uú]blica]($|[\W\s])/im,
     /(^|[\s\W])cuarteto de nos($|[\W\s])/im,
@@ -120,9 +109,7 @@ export class manager extends AlgoManager {
     /(^|[\s\W])Jaime Ross($|[\W\s])/im,
     /(^|[\s\W])Leo Masliah($|[\W\s])/im,
     /(^|[\s\W])cndf($|[\W\s])/im,
-    /(^|[\s\W])Antel($|[\W\s])/im,
-    /(^|[\s\W])Sodre($|[\W\s])/im,
-
+    /(^|[\s\W])Zunino($|[\W\s])/im,
   ]
 
   // Include Uruguayan users here to always include their posts
@@ -211,6 +198,38 @@ export class manager extends AlgoManager {
     // Check if the post author is in the blocked members list
     if (this.blocked_members.includes(post.author)) {
       return false; // Block the post
+    }
+
+    // Check if this is a reply to a blocked user's post
+    if (post.replyParent) {
+      try {
+        // Get the parent post from the database
+        const parentPost = await dbClient.getPostForURI(post.replyParent);
+        
+        // If parent post exists and its author is blocked, reject this post
+        if (parentPost && this.blocked_members.includes(parentPost.author)) {
+          console.log(`${this.name}: Rejected post - reply to blocked author ${parentPost.author}`);
+          return false;
+        }
+      } catch (error) {
+        console.error(`${this.name}: Error checking parent post:`, error);
+      }
+    }
+
+    // Also check reply root if different from parent
+    if (post.replyRoot && post.replyRoot !== post.replyParent) {
+      try {
+        // Get the root post from the database
+        const rootPost = await dbClient.getPostForURI(post.replyRoot);
+        
+        // If root post exists and its author is blocked, reject this post
+        if (rootPost && this.blocked_members.includes(rootPost.author)) {
+          console.log(`${this.name}: Rejected post - reply to thread by blocked author ${rootPost.author}`);
+          return false;
+        }
+      } catch (error) {
+        console.error(`${this.name}: Error checking root post:`, error);
+      }
     }
 
     // Use Set for faster lookups
