@@ -109,7 +109,7 @@ export class manager extends AlgoManager {
     /(^|[\s\W])Jaime Ross($|[\W\s])/im,
     /(^|[\s\W])Leo Masliah($|[\W\s])/im,
     /(^|[\s\W])cndf($|[\W\s])/im,
-    /(^|[\s\W])Zunino($|[\W\s])/im,
+    /(^|[\s\W])mauricio zunino($|[\W\s])/im,
   ]
 
   // Include Uruguayan users here to always include their posts
@@ -198,38 +198,6 @@ export class manager extends AlgoManager {
     // Check if the post author is in the blocked members list
     if (this.blocked_members.includes(post.author)) {
       return false; // Block the post
-    }
-
-    // Check if this is a reply to a blocked user's post
-    if (post.replyParent) {
-      try {
-        // Get the parent post from the database
-        const parentPost = await dbClient.getPostForURI(post.replyParent);
-        
-        // If parent post exists and its author is blocked, reject this post
-        if (parentPost && this.blocked_members.includes(parentPost.author)) {
-          console.log(`${this.name}: Rejected post - reply to blocked author ${parentPost.author}`);
-          return false;
-        }
-      } catch (error) {
-        console.error(`${this.name}: Error checking parent post:`, error);
-      }
-    }
-
-    // Also check reply root if different from parent
-    if (post.replyRoot && post.replyRoot !== post.replyParent) {
-      try {
-        // Get the root post from the database
-        const rootPost = await dbClient.getPostForURI(post.replyRoot);
-        
-        // If root post exists and its author is blocked, reject this post
-        if (rootPost && this.blocked_members.includes(rootPost.author)) {
-          console.log(`${this.name}: Rejected post - reply to thread by blocked author ${rootPost.author}`);
-          return false;
-        }
-      } catch (error) {
-        console.error(`${this.name}: Error checking root post:`, error);
-      }
     }
 
     // Use Set for faster lookups
