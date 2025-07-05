@@ -17,6 +17,29 @@ dotenv.config()
 
 export const shortname = 'argentina'
 
+export const handler = async (ctx: AppContext, params: QueryParams) => {
+  const builder = await dbClient.getLatestPostsForTag({
+    tag: shortname,
+    limit: params.limit,
+    cursor: params.cursor,
+  })
+
+  let feed = builder.map((row) => ({
+    post: row.uri,
+  }))
+
+  let cursor: string | undefined
+  const last = builder.at(-1)
+  if (last) {
+    cursor = `${new Date(last.indexedAt).getTime()}::${last.cid}`
+  }
+
+  return {
+    cursor,
+    feed,
+  }
+}
+
 // Main Argentina pattern(s)
 const MAIN_PATTERNS = [
   /(^|[\s\W])🇦🇷($|[\W\s])/im,
