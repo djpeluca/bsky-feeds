@@ -136,7 +136,7 @@ export abstract class BaseFeedManager extends AlgoManager {
   }
 
   protected async processNewAuthors(new_authors: string[]) {
-    const BATCH_SIZE = 10
+    const BATCH_SIZE = parseInt(process.env.FEED_BATCH_SIZE || '50', 10)
     const batches: string[][] = []
     for (let i = 0; i < new_authors.length; i += BATCH_SIZE) {
       batches.push(new_authors.slice(i, i + BATCH_SIZE))
