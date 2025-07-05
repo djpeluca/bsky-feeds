@@ -42,75 +42,102 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
 
 export class manager extends AlgoManager {
   public name: string = shortname
-  private authorList: string[] = []
+  private authorSet: Set<string> = new Set()
+  private blockedSet: Set<string> = new Set()
   public author_collection = 'list_members'
-  private blocked_members: string[] = []
+  
+  // Cache for performance
+  private lastListUpdate = 0
+  private readonly LIST_UPDATE_INTERVAL = 1000 * 60 * 15 // 15 minutes
+  private compiledPatterns: RegExp[] = []
+  private patternCache: Map<string, boolean> = new Map()
+  private readonly CACHE_SIZE_LIMIT = 10000
+  private listCache: Map<string, { members: string[], timestamp: number }> = new Map()
+  private readonly LIST_CACHE_DURATION = 1000 * 60 * 5 // 5 minutes
+
+  // Pre-compile all patterns for better performance
+  private readonly PATTERNS = [
+    // Main Uruguay pattern - optimized with word boundaries
+    /\b(?!uruguaiana\b)(?:urugua|montevid|charrua|tacuaremb[oó]|paysand[ú]|semana de turismo|semana de la cerveza|daym[áa]n|guaviyú|arapey|🇺🇾|punta del este|yorugua|U R U G U A Y|Jose Mujica|Jos[eé] Mujica|Pepe Mujica|Carolina Cosse|Yamand[uú] Orsi|[aá]lvaro Delgado|Blanca Rodr[ií]guez|Valeria Ripoll|Lacalle Pou|Batllismo|Willsonismo|Herrerismo|Batllista|Willsonista|herrerista|peñarol|Parque Rod[oó])\b/i,
+    
+    // Location patterns - simplified word boundaries
+    /\b(?:Colonia del Sacramento|Cabo Polonio|Piri[aá]polis|Valizas|Aguas Dulces|Laguna Garz[oó]n|Mercado del Puerto|Cerro San Antonio|Termas del Daym[aá]n|Salto Grande|Pocitos|Punta Carretas|Malv[ií]n|Villa Española|Bañados de Carrasco|Casab[oó]|Paso de la Arena|Jacinto Vera|Villa Dolores|Las Acacias|Nuevo Par[ií]s|Flor de Maroñas|Cerrito de la Victoria)\b/i,
+    
+    // People patterns - simplified
+    /\b(?:Jos[eé] Gervasio Artigas|Jos[eé] Enrique Rod[oó]|Juana de Ibarbourou|Mario Benedetti|Eduardo Galeano|Luis Su[aá]rez|Edinson Cavani|Diego Forl[aá]n|[oó]scar Tab[aá]rez|Enzo Francescoli|Alfredo Zitarrosa|Carlos Gardel|Rub[eé]n Rada|Jorge Drexler|China Zorrilla|Fede [aá]lvarez|Fede Vigevani|Daniel Hendler|Jos[eé] Mujica|Tabar[eé] V[aá]zquez|Luis Lacalle Pou|Julio Mar[ií]a Sanguinetti)\b/i,
+    
+    // Institution patterns
+    /\b(?:udelar|Universidad de la rep[uú]blica|cuarteto de nos|Vela puerca|Jaime Ross|Leo Masliah|cndf|mauricio zunino)\b/i,
+  ]
 
   public async start() {
-    this.authorList = await dbClient.getDistinctFromCollection(
-      this.author_collection,
-      'did',
-    )
+    await this.compilePatterns()
+    await this.updateLists()
   }
 
-  public matchPatterns: RegExp[] = [
-    /(?!uruguaiana)(?:urugua|montevid|charrua|tacuaremb[oó]|paysand[úu]|semana de turismo|semana de la cerveza|daym[áa]n|guaviyú|arapey|🇺🇾|punta del este|yorugua|U R U G U A Y|Jose Mujica|Jos[eé] Mujica|Pepe Mujica|Carolina Cosse|Yamand[uú] Orsi|[aá]lvaro Delgado|Blanca Rodr[ií]guez|Valeria Ripoll|Lacalle Pou|Batllismo|Willsonismo|Herrerismo|Batllista|Willsonista|herrerista|peñarol|Parque Rod[oó])\w*/,
-    /(^|[\s\W])Colonia del Sacramento($|[\W\s])/im,
-    /(^|[\s\W])Cabo Polonio($|[\W\s])/im,
-    /(^|[\s\W])Piri[aá]polis($|[\W\s])/im,
-    /(^|[\s\W])Valizas($|[\W\s])/im,
-    /(^|[\s\W])Aguas Dulces($|[\W\s])/im,
-    /(^|[\s\W])Laguna Garz[oó]n($|[\W\s])/im,
-    /(^|[\s\W])Mercado del Puerto($|[\W\s])/im,
-    /(^|[\s\W])Cerro San Antonio($|[\W\s])/im,
-    /(^|[\s\W])Termas del Daym[aá]n($|[\W\s])/im,
-    /(^|[\s\W])Salto Grande($|[\W\s])/im,
-    /(^|[\s\W])Pocitos($|[\W\s])/im,
-    /(^|[\s\W])Punta Carretas($|[\W\s])/im,
-    /(^|[\s\W])Malv[ií]n($|[\W\s])/im,
-    /(^|[\s\W])Villa Española($|[\W\s])/im,
-    /(^|[\s\W])Bañados de Carrasco($|[\W\s])/im,
-    /(^|[\s\W])Casab[oó]($|[\W\s])/im,
-    /(^|[\s\W])Paso de la Arena($|[\W\s])/im,
-    /(^|[\s\W])Jacinto Vera($|[\W\s])/im,
-    /(^|[\s\W])Villa Dolores($|[\W\s])/im,
-    /(^|[\s\W])Las Acacias($|[\W\s])/im,
-    /(^|[\s\W])Nuevo Par[ií]s($|[\W\s])/im,
-    /(^|[\s\W])Flor de Maroñas($|[\W\s])/im,
-    /(^|[\s\W])Cerrito de la Victoria($|[\W\s])/im,
-    /(^|[\s\W])Jos[eé] Gervasio Artigas($|[\W\s])/im,
-    /(^|[\s\W])Jos[eé] Enrique Rod[oó]($|[\W\s])/im,
-    /(^|[\s\W])Juana de Ibarbourou($|[\W\s])/im,
-    /(^|[\s\W])Mario Benedetti($|[\W\s])/im,
-    /(^|[\s\W])Eduardo Galeano($|[\W\s])/im,
-    /(^|[\s\W])Luis Su[aá]rez($|[\W\s])/im,
-    /(^|[\s\W])Edinson Cavani($|[\W\s])/im,
-    /(^|[\s\W])Diego Forl[aá]n($|[\W\s])/im,
-    /(^|[\s\W])[oó]scar Tab[aá]rez($|[\W\s])/im,
-    /(^|[\s\W])Enzo Francescoli($|[\W\s])/im,
-    /(^|[\s\W])Alfredo Zitarrosa($|[\W\s])/im,
-    /(^|[\s\W])Carlos Gardel($|[\W\s])/im,
-    /(^|[\s\W])Rub[eé]n Rada($|[\W\s])/im,
-    /(^|[\s\W])Jorge Drexler($|[\W\s])/im,
-    /(^|[\s\W])China Zorrilla($|[\W\s])/im,
-    /(^|[\s\W])Fede [aá]lvarez($|[\W\s])/im,
-    /(^|[\s\W])Fede Vigevani($|[\W\s])/im,
-    /(^|[\s\W])Daniel Hendler($|[\W\s])/im,
-    /(^|[\s\W])Jos[eé] Mujica($|[\W\s])/im,
-    /(^|[\s\W])Tabar[eé] V[aá]zquez($|[\W\s])/im,
-    /(^|[\s\W])Luis Lacalle Pou($|[\W\s])/im,
-    /(^|[\s\W])Julio Mar[ií]a Sanguinetti($|[\W\s])/im,
-    /(^|[\s\W])ñeri($|[\W\s])/im,
-    /(^|[\s\W])nieri($|[\W\s])/im,
-    /(^|[\s\W])udelar($|[\W\s])/im,
-    /(^|[\s\W])Universidad de la rep[uú]blica]($|[\W\s])/im,
-    /(^|[\s\W])cuarteto de nos($|[\W\s])/im,
-    /(^|[\s\W])Vela puerca($|[\W\s])/im,
-    /(^|[\s\W])Jaime Ross($|[\W\s])/im,
-    /(^|[\s\W])Leo Masliah($|[\W\s])/im,
-    /(^|[\s\W])cndf($|[\W\s])/im,
-    /(^|[\s\W])mauricio zunino($|[\W\s])/im,
-  ]
+  private async compilePatterns() {
+    if (this.compiledPatterns.length === 0) {
+      this.compiledPatterns = this.PATTERNS
+    }
+  }
+
+  private async getCachedListMembers(list: string): Promise<string[]> {
+    const now = Date.now()
+    const cached = this.listCache.get(list)
+    
+    if (cached && (now - cached.timestamp) < this.LIST_CACHE_DURATION) {
+      return cached.members
+    }
+
+    try {
+      const members = await getListMembers(list, this.agent)
+      this.listCache.set(list, { members, timestamp: now })
+      return members
+    } catch (error) {
+      console.error(`Error fetching list members for ${list}:`, error)
+      // Return cached data if available, even if expired
+      return cached?.members || []
+    }
+  }
+
+  private async updateLists() {
+    const now = Date.now()
+    if (now - this.lastListUpdate < this.LIST_UPDATE_INTERVAL) {
+      return // Use cached lists if recently updated
+    }
+
+    try {
+      // Update author list
+      if (process.env.URUGUAY_LISTS && process.env.URUGUAY_LISTS.trim() !== '') {
+        const lists: string[] = `${process.env.URUGUAY_LISTS}`.split('|').filter(list => list.trim() !== '')
+        if (lists.length > 0) {
+          const listMembersPromises = lists.map(list => this.getCachedListMembers(list))
+          const allMembers = await Promise.all(listMembersPromises)
+          this.authorSet = new Set(allMembers.flat())
+        }
+      } else {
+        console.warn(`${this.name}: URUGUAY_LISTS environment variable not set or empty`)
+        this.authorSet = new Set()
+      }
+
+      // Update blocked members
+      if (process.env.BLOCKLIST && process.env.BLOCKLIST.trim() !== '') {
+        const blockLists: string[] = `${process.env.BLOCKLIST}`.split('|').filter(list => list.trim() !== '')
+        if (blockLists.length > 0) {
+          const blockedMembersPromises = blockLists.map(list => this.getCachedListMembers(list))
+          const allBlockedMembers = await Promise.all(blockedMembersPromises)
+          this.blockedSet = new Set(allBlockedMembers.flat())
+        }
+      } else {
+        this.blockedSet = new Set()
+      }
+
+      this.lastListUpdate = now
+    } catch (error) {
+      console.error(`${this.name}: Error updating lists:`, error)
+      // Keep existing sets on error to prevent complete failure
+    }
+  }
 
   // Include Uruguayan users here to always include their posts
   public matchUsers: string[] = []
@@ -118,104 +145,185 @@ export class manager extends AlgoManager {
   public async periodicTask() {
     dotenv.config()
 
-    await this.db.removeTagFromOldPosts(
-      this.name,
-      Date.now() - 7 * 24 * 60 * 60 * 1000,
-    );
-
-    if (this.authorList === undefined) {
-      await this.start()
+    try {
+      await this.db.removeTagFromOldPosts(
+        this.name,
+        Date.now() - 7 * 24 * 60 * 60 * 1000,
+      )
+    } catch (error) {
+      console.error(`${this.name}: Error removing old posts:`, error)
     }
 
-    const lists: string[] = `${process.env.URUGUAY_LISTS}`.split('|');
-    const listMembersPromises = lists.map(list => getListMembers(list, this.agent));
-    const allMembers = await Promise.all(listMembersPromises);
-    let list_members = [...new Set(allMembers.flat())];
+    await this.updateLists()
 
-    // Handle blocked members
-    if (process.env.BLOCKLIST) {
-      const blockLists: string[] = `${process.env.BLOCKLIST}`.split('|');
-      const blockedMembersPromises = blockLists.map(list => getListMembers(list, this.agent));
-      const allBlockedMembers = await Promise.all(blockedMembersPromises);
-      this.blocked_members = [...new Set(allBlockedMembers.flat())];
+    try {
+      // Get current database authors
+      const db_authors = await dbClient.getDistinctFromCollection(
+        this.author_collection,
+        'did',
+      )
+
+      const dbAuthorSet = new Set(db_authors)
+      const new_authors = Array.from(this.authorSet).filter(member => !dbAuthorSet.has(member))
+      const del_authors = db_authors.filter(member => !this.authorSet.has(member))
+
+      // Remove tags for deleted authors in bulk
+      if (del_authors.length > 0) {
+        try {
+          await this.db.deleteManyDID(this.author_collection, del_authors)
+        } catch (error) {
+          console.error(`${this.name}: Error deleting authors:`, error)
+        }
+      }
+
+      // Process new authors in batches
+      if (new_authors.length > 0) {
+        await this.processNewAuthors(new_authors)
+      }
+    } catch (error) {
+      console.error(`${this.name}: Error in periodic task database operations:`, error)
     }
 
-    // Fetch all distinct authors in one go
-    const db_authors = await dbClient.getDistinctFromCollection(
-      this.author_collection,
-      'did',
-    );
-
-    // Use Set for faster lookups
-    const authorSet = new Set(db_authors);
-    const new_authors = list_members.filter(member => !authorSet.has(member));
-    const del_authors = db_authors.filter(member => !list_members.includes(member));
-
-    // Update authorList in one go
-    this.authorList = [...list_members];
-
-    // Remove tags for deleted authors in bulk
-    if (del_authors.length > 0) {
-      await this.db.deleteManyDID(this.author_collection, del_authors);
+    // Clear pattern cache periodically to prevent memory bloat
+    if (this.patternCache.size > this.CACHE_SIZE_LIMIT) {
+      this.patternCache.clear()
     }
 
-    // Fetch all posts for new authors in a single call
-    const allPostsPromises = new_authors.map(new_author => getPostsForUser(new_author, this.agent));
-    let allPosts = await Promise.all(allPostsPromises);
+    // Clear old list cache entries
+    const now = Date.now()
+    for (const [key, value] of this.listCache.entries()) {
+      if (now - value.timestamp > this.LIST_CACHE_DURATION) {
+        this.listCache.delete(key)
+      }
+    }
+  }
 
-    // Declare bulkOps array to hold operations
-    let bulkOps: any[] = [];
-
-    for (const [index, new_author] of new_authors.entries()) {
-      const posts = allPosts[index];
-      const validPosts = await Promise.all(posts.map(async post => (await this.filter_post(post)) ? post : null));
-
-      // Filter out null values
-      const filteredPosts = validPosts.filter(post => post !== null);
-
-      // Prepare bulk operation for author updates
-      bulkOps.push({
-        updateOne: {
-          filter: { did: new_author },
-          update: { $set: { did: new_author } },
-          upsert: true,
-        },
-      });
+  private async processNewAuthors(new_authors: string[]) {
+    const BATCH_SIZE = 10
+    const batches: string[][] = []
+    
+    for (let i = 0; i < new_authors.length; i += BATCH_SIZE) {
+      batches.push(new_authors.slice(i, i + BATCH_SIZE))
     }
 
-    // Execute bulk operations for posts
-    if (bulkOps.length > 0) {
-      await this.db.bulkWrite('post', bulkOps);
+    for (const batch of batches) {
+      const batchPromises = batch.map(async (author) => {
+        try {
+          const posts = await getPostsForUser(author, this.agent)
+          const validPosts = await this.filterPostsBatch(posts)
+          return { author, posts: validPosts }
+        } catch (error) {
+          console.error(`Error processing author ${author}:`, error)
+          return { author, posts: [] }
+        }
+      })
+
+      const batchResults = await Promise.all(batchPromises)
+      
+      // Prepare bulk operations for posts
+      const postBulkOps: any[] = []
+      const authorBulkOps: any[] = []
+      
+      batchResults.forEach(({ author, posts }) => {
+        // Add author to list_members collection
+        authorBulkOps.push({
+          updateOne: {
+            filter: { did: author },
+            update: { $set: { did: author } },
+            upsert: true,
+          },
+        })
+
+        // Add posts with tags to post collection
+        posts.forEach(post => {
+          postBulkOps.push({
+            updateOne: {
+              filter: { uri: post.uri },
+              update: { $addToSet: { algoTags: this.name } },
+              upsert: true,
+            },
+          })
+        })
+      })
+
+      // Execute bulk operations separately for each collection
+      if (authorBulkOps.length > 0) {
+        try {
+          await this.db.bulkWrite(this.author_collection, authorBulkOps)
+        } catch (error) {
+          console.error(`Error updating authors in ${this.author_collection}:`, error)
+        }
+      }
+
+      if (postBulkOps.length > 0) {
+        try {
+          await this.db.bulkWrite('post', postBulkOps)
+        } catch (error) {
+          console.error('Error updating posts:', error)
+        }
+      }
     }
+  }
+
+  private async filterPostsBatch(posts: Post[]): Promise<Post[]> {
+    const validPosts: Post[] = []
+    
+    for (const post of posts) {
+      if (await this.filter_post(post)) {
+        validPosts.push(post)
+      }
+    }
+    
+    return validPosts
   }
 
   public async filter_post(post: Post): Promise<Boolean> {
     if (this.agent === null) {
-      await this.start();
-      if (this.agent === null) return false; // Early return if agent is still null
+      await this.start()
+      if (this.agent === null) return false
     }
 
-    // Check if the post author is in the blocked members list
-    if (this.blocked_members.includes(post.author)) {
-      return false; // Block the post
+    // Check blocked members first (fastest check)
+    if (this.blockedSet.has(post.author)) {
+      return false
     }
 
-    // Use Set for faster lookups
-    const authorSet = new Set(this.authorList);
-    if (authorSet.has(post.author)) {
-      return true; // Skip pattern matching for these posts
+    // Check whitelisted authors (fast check)
+    if (this.authorSet.has(post.author)) {
+      return true
     }
 
-    // Build matchString from post properties
-    const matchString = [
-      post.embed?.images?.map(image => image.alt).join(' ') ?? '',
-      post.embed?.alt ?? '',
-      post.embed?.media?.alt ?? '',
-      post.tags?.join(' ') ?? '',
-      post.text
-    ].join(' ').toLowerCase(); // Convert to lower case once
+    // Build matchString efficiently
+    const matchString = this.buildMatchString(post)
+    
+    // Check pattern cache first
+    const cacheKey = `${post.uri}:${matchString}`
+    if (this.patternCache.has(cacheKey)) {
+      return this.patternCache.get(cacheKey)!
+    }
 
-    // Combine match checks
-    return this.matchPatterns.some(pattern => pattern.test(matchString));
+    // Test patterns
+    const matches = this.compiledPatterns.some(pattern => pattern.test(matchString))
+    
+    // Cache result
+    this.patternCache.set(cacheKey, matches)
+    
+    return matches
+  }
+
+  private buildMatchString(post: Post): string {
+    // Pre-allocate array for better performance
+    const parts: string[] = []
+    
+    if (post.text) parts.push(post.text)
+    if (post.tags?.length) parts.push(post.tags.join(' '))
+    if (post.embed?.alt) parts.push(post.embed.alt)
+    if (post.embed?.media?.alt) parts.push(post.embed.media.alt)
+    if (post.embed?.images?.length) {
+      const imageAlts = post.embed.images.map(img => img.alt).filter(Boolean)
+      if (imageAlts.length) parts.push(imageAlts.join(' '))
+    }
+    
+    return parts.join(' ').toLowerCase()
   }
 }
