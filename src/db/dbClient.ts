@@ -409,6 +409,10 @@ class dbSingleton {
     const result = await collectionRef.bulkWrite(bulkOps);
     return result;
   }
+
+  async find(collection: string, filter: any, options?: any) {
+    return this.client?.db().collection(collection).find(filter, options).toArray();
+  }
 }
 
 const dbClient = dbSingleton.getInstance()
