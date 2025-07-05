@@ -87,4 +87,8 @@ export class manager extends BaseFeedManager {
     }
     return !!(await this.uruguay.filter_post(post)) || !!(await this.argentina.filter_post(post));
   }
+
+  async periodicTask() {
+    // No periodic DB operations needed for composite feed
+  }
 }
