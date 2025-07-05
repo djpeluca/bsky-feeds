@@ -240,7 +240,6 @@ export class manager extends AlgoManager {
             updateOne: {
               filter: { uri: post.uri },
               update: {
-                $setOnInsert: { algoTags: [] }, // ensures array on insert
                 $addToSet: { algoTags: this.name }
               },
               upsert: true,
