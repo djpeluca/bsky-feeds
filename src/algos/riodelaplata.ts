@@ -1,94 +1,239 @@
 import { QueryParams } from '../lexicon/types/app/bsky/feed/getFeedSkeleton'
 import { AppContext } from '../config'
-import { AlgoManager } from '../addn/algoManager'
-import dotenv from 'dotenv'
-import { Post } from '../db/schema'
-import dbClient from '../db/dbClient'
-import getUserDetails from '../addn/getUserDetails'
-import { getListMembers } from '../addn/getListMembers'
-import { manager as UruguayManager } from './uruguay'
-import { manager as ArgentinaManager } from './argentina'
-import { Agent } from '@atproto/api'
 import { BaseFeedManager } from './BaseFeedManager'
+import dotenv from 'dotenv'
+import dbClient from '../db/dbClient'
 
 dotenv.config()
 
-// max 15 chars
 export const shortname = 'riodelaplata'
 
-
-export const handler = async (ctx: AppContext, params: QueryParams) => {
-  // Fetch posts tagged for either feed (union)
-  const uruguayPosts = await dbClient.getLatestPostsForTag({
-    tag: 'uruguay',
-    limit: params.limit,
-    cursor: params.cursor,
-  })
-  const argentinaPosts = await dbClient.getLatestPostsForTag({
-    tag: 'argentina',
-    limit: params.limit,
-    cursor: params.cursor,
-  })
-
-  // Merge and deduplicate by URI
-  const allPosts = [...uruguayPosts, ...argentinaPosts]
-  const uniquePosts = Array.from(
-    new Map(allPosts.map(post => [post.uri, post])).values()
-  )
-
-  // Sort by indexedAt/cid as needed
-  uniquePosts.sort((a, b) => b.indexedAt - a.indexedAt || b.cid.localeCompare(a.cid))
-
-  // Apply pagination/limit
-  const feed = uniquePosts.slice(0, params.limit).map(row => ({ post: row.uri }))
-  let cursor: string | undefined
-  const last = uniquePosts[params.limit - 1]
-  if (last) {
-    cursor = `${new Date(last.indexedAt).getTime()}::${last.cid}`
-  }
-  return { cursor, feed }
-}
+// Argentina patterns first
+const ARG_MAIN_PATTERNS = [
+  /(^|[\s\W])🇦🇷($|[\W\s])/im,
+  /(^|[\s\W])Argenti($|[\W\s])/im,
+  /(^|[\s\W])Argento($|[\W\s])/im,
+  /(^|[\s\W])Argenta($|[\W\s])/im,
+  /(^|[\s\W])Milei($|[\W\s])/im,
+  /(^|[\s\W])Cyberciruj($|[\W\s])/im,
+  /(^|[\s\W])TwitterArg($|[\W\s])/im,
+];
+const ARG_LOCATION_PATTERNS = [
+  /(^|[\s\W])Buenos Aires($|[\W\s])/im,
+  /(^|[\s\W])Tierra del Fuego($|[\W\s])/im,
+  /(^|[\s\W])Gualeguaych[úu]($|[\W\s])/im,
+  /(^|[\s\W])Capital Federal($|[\W\s])/im,
+  /(^|[\s\W])Puerto Madero($|[\W\s])/im,
+  /(^|[\s\W])Patagonia($|[\W\s])/im,
+  /(^|[\s\W])La Bombonera($|[\W\s])/im,
+  /(^|[\s\W])Monumental de Nuñez($|[\W\s])/im,
+  /(^|[\s\W])Casa Rosada($|[\W\s])/im,
+  /(^|[\s\W])Perito Moreno($|[\W\s])/im,
+  /(^|[\s\W])San Mart[ií]n de los Andes($|[\W\s])/im,
+];
+const ARG_PEOPLE_PATTERNS = [
+  /(^|[\s\W])Maradona($|[\W\s])/im,
+  /(^|[\s\W])Lionel Messi($|[\W\s])/im,
+  /(^|[\s\W])Eva Per[óo]n($|[\W\s])/im,
+  /(^|[\s\W])Evita Per[óo]n($|[\W\s])/im,
+  /(^|[\s\W])Domingo Per[óo]n($|[\W\s])/im,
+  /(^|[\s\W])Juan Per[óo]n($|[\W\s])/im,
+  /(^|[\s\W])Jorge Luis Borges($|[\W\s])/im,
+  /(^|[\s\W])Mercedes Sosa($|[\W\s])/im,
+  /(^|[\s\W])Carlos Gardel($|[\W\s])/im,
+  /(^|[\s\W])Victoria Villarruel($|[\W\s])/im,
+  /(^|[\s\W])Sergio Massa($|[\W\s])/im,
+  /(^|[\s\W])Larreta($|[\W\s])/im,
+  /(^|[\s\W])Patricia Bullrich($|[\W\s])/im,
+  /(^|[\s\W])Pato Bullrich($|[\W\s])/im,
+  /(^|[\s\W])Cris Morena($|[\W\s])/im,
+  /(^|[\s\W])Spreen($|[\W\s])/im,
+  /(^|[\s\W])Colapinto($|[\W\s])/im,
+  /(^|[\s\W])Jorge Rial($|[\W\s])/im,
+  /(^|[\s\W])Susana Gimenez($|[\W\s])/im,
+  /(^|[\s\W])Kicillof($|[\W\s])/im,
+  /(^|[\s\W])Macri($|[\W\s])/im,
+];
+const ARG_POLITICAL_PATTERNS = [
+  /(^|[\s\W])Malvinas($|[\W\s])/im,
+  /(^|[\s\W])conourbano($|[\W\s])/im,
+  /(^|[\s\W])Kirchner($|[\W\s])/im,
+  /(^|[\s\W])Alberto Fernandez($|[\W\s])/im,
+  /(^|[\s\W])Per[óo]nia($|[\W\s])/im,
+  /(^|[\s\W])Per[óo]nismo($|[\W\s])/im,
+];
+// Uruguay patterns
+const URUGUAY_MAIN_PATTERNS = [
+  /\b(?!uruguaiana\b)(?:urugua|montevid|charrua|tacuaremb[oó]|paysand[ú]|semana de turismo|semana de la cerveza|daym[áa]n|guaviyú|arapey|🇺🇾|punta del este|yorugua|U R U G U A Y|Jose Mujica|Jos[eé] Mujica|Pepe Mujica|Carolina Cosse|Yamand[uú] Orsi|[aá]lvaro Delgado|Blanca Rodr[ií]guez|Valeria Ripoll|Lacalle Pou|Batllismo|Willsonismo|Herrerismo|Batllista|Willsonista|herrerista|peñarol|Parque Rod[oó])\b/i,
+];
+const URUGUAY_LOCATION_PATTERNS = [
+  /\bColonia del Sacramento\b/i,
+  /\bCabo Polonio\b/i,
+  /\bPiri[aá]polis\b/i,
+  /\bValizas\b/i,
+  /\bAguas Dulces\b/i,
+  /\bLaguna Garz[oó]n\b/i,
+  /\bMercado del Puerto\b/i,
+  /\bCerro San Antonio\b/i,
+  /\bTermas del Daym[aá]n\b/i,
+  /\bSalto Grande\b/i,
+  /\bPocitos\b/i,
+  /\bPunta Carretas\b/i,
+  /\bMalv[ií]n\b/i,
+  /\bVilla Española\b/i,
+  /\bBañados de Carrasco\b/i,
+  /\bCasab[oó]\b/i,
+  /\bPaso de la Arena\b/i,
+  /\bJacinto Vera\b/i,
+  /\bVilla Dolores\b/i,
+  /\bLas Acacias\b/i,
+  /\bNuevo Par[ií]s\b/i,
+  /\bFlor de Maroñas\b/i,
+  /\bCerrito de la Victoria\b/i,
+];
+const URUGUAY_PEOPLE_PATTERNS = [
+  /\bJos[eé] Gervasio Artigas\b/i,
+  /\bJos[eé] Enrique Rod[oó]\b/i,
+  /\bJuana de Ibarbourou\b/i,
+  /\bMario Benedetti\b/i,
+  /\bEduardo Galeano\b/i,
+  /\bLuis Su[aá]rez\b/i,
+  /\bEdinson Cavani\b/i,
+  /\bDiego Forl[aá]n\b/i,
+  /\b[oó]scar Tab[aá]rez\b/i,
+  /\bEnzo Francescoli\b/i,
+  /\bAlfredo Zitarrosa\b/i,
+  /\bCarlos Gardel\b/i,
+  /\bRub[eé]n Rada\b/i,
+  /\bJorge Drexler\b/i,
+  /\bChina Zorrilla\b/i,
+  /\bFede [aá]lvarez\b/i,
+  /\bFede Vigevani\b/i,
+  /\bDaniel Hendler\b/i,
+  /\bJos[eé] Mujica\b/i,
+  /\bTabar[eé] V[aá]zquez\b/i,
+  /\bLuis Lacalle Pou\b/i,
+  /\bJulio Mar[ií]a Sanguinetti\b/i,
+];
+const URUGUAY_INSTITUTION_PATTERNS = [
+  /\budelar\b/i,
+  /\bUniversidad de la rep[uú]blica\b/i,
+  /\bcuarteto de nos\b/i,
+  /\bVela puerca\b/i,
+  /\bJaime Ross\b/i,
+  /\bLeo Masliah\b/i,
+  /\bcndf\b/i,
+  /\bmauricio zunino\b/i,
+];
+// Rio de la Plata specific patterns
+const RIO_PATTERNS = [
+  /(^|[\s\W])Rio de la Plata($|[\W\s])/im,
+  /(^|[\s\W])dulce de leche($|[\W\s])/im,
+  /(^|[\s\W])carpincho($|[\W\s])/im,
+  /(^|[\s\W])🧉($|[\W\s])/im,
+];
 
 export class manager extends BaseFeedManager {
-  private uruguay: UruguayManager
-  private argentina: ArgentinaManager
-  protected PATTERNS = [
-    /(^|[\s\W])Rio de la Plata($|[\W\s])/im,
-    /(^|[\s\W])dulce de leche($|[\W\s])/im,
-    /(^|[\s\W])carpincho($|[\W\s])/im,
-    /(^|[\s\W])🧉($|[\W\s])/im,
-  ];
-  protected LISTS_ENV = '';
   public name = shortname;
-  public author_collection = '';
-
-  constructor(db: any, agent: Agent) {
-    super(db, agent);
-    this.uruguay = new UruguayManager(db, agent);
-    this.argentina = new ArgentinaManager(db, agent);
-  }
-
-  async start() {
-    await this.uruguay.start();
-    await this.argentina.start();
-  }
+  public author_collection = 'list_members';
+  protected PATTERNS = [
+    ...ARG_MAIN_PATTERNS,
+    ...ARG_LOCATION_PATTERNS,
+    ...ARG_PEOPLE_PATTERNS,
+    ...ARG_POLITICAL_PATTERNS,
+    ...URUGUAY_MAIN_PATTERNS,
+    ...URUGUAY_LOCATION_PATTERNS,
+    ...URUGUAY_PEOPLE_PATTERNS,
+    ...URUGUAY_INSTITUTION_PATTERNS,
+    ...RIO_PATTERNS,
+  ];
+  protected LISTS_ENV = 'RIO_DE_LA_PLATA_LISTS';
 
   public async filter_post(post: any): Promise<boolean> {
-    const matchString = [
-      post.text,
-      ...(post.tags || []),
-      post.embed?.alt,
-      post.embed?.media?.alt,
-      ...(post.embed?.images?.map((img: any) => img.alt) || [])
-    ].filter(Boolean).join(' ').toLowerCase();
-
-    if (this.PATTERNS.some(pattern => pattern.test(matchString))) {
-      return true;
+    const parts: string[] = [];
+    if (post.text) parts.push(post.text);
+    if (post.tags?.length) parts.push(post.tags.join(' '));
+    if (post.embed?.alt) parts.push(post.embed.alt);
+    if (post.embed?.media?.alt) parts.push(post.embed.media.alt);
+    if (post.embed?.images?.length) {
+      const imageAlts = post.embed.images.map((img: any) => img.alt).filter(Boolean);
+      if (imageAlts.length) parts.push(imageAlts.join(' '));
     }
-    return !!(await this.uruguay.filter_post(post)) || !!(await this.argentina.filter_post(post));
+    const matchString = parts.join(' ').toLowerCase();
+    const cacheKey = `${post.uri}:${matchString}`;
+    if (this.patternCache.has(cacheKey)) {
+      return this.patternCache.get(cacheKey)!;
+    }
+    // Grouped pattern matching for early exit
+    const groups = [
+      ARG_MAIN_PATTERNS,
+      ARG_LOCATION_PATTERNS,
+      ARG_PEOPLE_PATTERNS,
+      ARG_POLITICAL_PATTERNS,
+      URUGUAY_MAIN_PATTERNS,
+      URUGUAY_LOCATION_PATTERNS,
+      URUGUAY_PEOPLE_PATTERNS,
+      URUGUAY_INSTITUTION_PATTERNS,
+      RIO_PATTERNS,
+    ];
+    let matches = false;
+    for (const group of groups) {
+      if (group.some(pattern => pattern.test(matchString))) {
+        matches = true;
+        break;
+      }
+    }
+    this.patternCache.set(cacheKey, matches);
+    return matches;
   }
 
-  async periodicTask() {
-    // No periodic DB operations needed for composite feed
+  // Optionally, you can override updateLists to merge all lists
+  protected async updateLists() {
+    const now = Date.now();
+    if (now - this.lastListUpdate < this.LIST_UPDATE_INTERVAL) return;
+    try {
+      // Merge all lists: Uruguay, Argentina, and Rio de la Plata
+      const lists: string[] = [
+        ...(process.env.URUGUAY_LISTS ? process.env.URUGUAY_LISTS.split('|').filter(Boolean) : []),
+        ...(process.env.ARGENTINA_LISTS ? process.env.ARGENTINA_LISTS.split('|').filter(Boolean) : []),
+        ...(process.env.RIO_DE_LA_PLATA_LISTS ? process.env.RIO_DE_LA_PLATA_LISTS.split('|').filter(Boolean) : []),
+      ];
+      if (lists.length > 0) {
+        const listMembersPromises = lists.map(list => this.getCachedListMembers(list));
+        const allMembers = await Promise.all(listMembersPromises);
+        this.authorSet = new Set(allMembers.flat());
+      } else {
+        this.authorSet = new Set();
+      }
+      // Blocked members
+      if (process.env.BLOCKLIST && process.env.BLOCKLIST.trim() !== '') {
+        const blockLists: string[] = process.env.BLOCKLIST.split('|').filter(list => list.trim() !== '');
+        if (blockLists.length > 0) {
+          const blockedMembersPromises = blockLists.map(list => this.getCachedListMembers(list));
+          const allBlockedMembers = await Promise.all(blockedMembersPromises);
+          this.blockedSet = new Set(allBlockedMembers.flat());
+        }
+      } else {
+        this.blockedSet = new Set();
+      }
+      this.lastListUpdate = now;
+    } catch (error) {
+      console.error(`${this.name}: Error updating lists:`, error);
+    }
   }
 }
+
+export const handler = async (ctx: AppContext, params: QueryParams) => {
+  const builder = await dbClient.getLatestPostsForTag({
+    tag: shortname,
+    limit: params.limit,
+    cursor: params.cursor,
+  });
+  let feed = builder.map((row) => ({ post: row.uri }));
+  let cursor: string | undefined;
+  const last = builder.at(-1);
+  if (last) {
+    cursor = `${new Date(last.indexedAt).getTime()}::${last.cid}`;
+  }
+  return { cursor, feed };
+};
