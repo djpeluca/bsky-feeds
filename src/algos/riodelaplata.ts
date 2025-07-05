@@ -186,41 +186,6 @@ export class manager extends BaseFeedManager {
     this.patternCache.set(cacheKey, matches);
     return matches;
   }
-
-  // Optionally, you can override updateLists to merge all lists
-  protected async updateLists() {
-    const now = Date.now();
-    if (now - this.lastListUpdate < this.LIST_UPDATE_INTERVAL) return;
-    try {
-      // Merge all lists: Uruguay, Argentina, and Rio de la Plata
-      const lists: string[] = [
-        ...(process.env.URUGUAY_LISTS ? process.env.URUGUAY_LISTS.split('|').filter(Boolean) : []),
-        ...(process.env.ARGENTINA_LISTS ? process.env.ARGENTINA_LISTS.split('|').filter(Boolean) : []),
-        ...(process.env.RIO_DE_LA_PLATA_LISTS ? process.env.RIO_DE_LA_PLATA_LISTS.split('|').filter(Boolean) : []),
-      ];
-      if (lists.length > 0) {
-        const listMembersPromises = lists.map(list => this.getCachedListMembers(list));
-        const allMembers = await Promise.all(listMembersPromises);
-        this.authorSet = new Set(allMembers.flat());
-      } else {
-        this.authorSet = new Set();
-      }
-      // Blocked members
-      if (process.env.BLOCKLIST && process.env.BLOCKLIST.trim() !== '') {
-        const blockLists: string[] = process.env.BLOCKLIST.split('|').filter(list => list.trim() !== '');
-        if (blockLists.length > 0) {
-          const blockedMembersPromises = blockLists.map(list => this.getCachedListMembers(list));
-          const allBlockedMembers = await Promise.all(blockedMembersPromises);
-          this.blockedSet = new Set(allBlockedMembers.flat());
-        }
-      } else {
-        this.blockedSet = new Set();
-      }
-      this.lastListUpdate = now;
-    } catch (error) {
-      console.error(`${this.name}: Error updating lists:`, error);
-    }
-  }
 }
 
 export const handler = async (ctx: AppContext, params: QueryParams) => {
