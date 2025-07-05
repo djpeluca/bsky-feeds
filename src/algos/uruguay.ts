@@ -239,7 +239,10 @@ export class manager extends AlgoManager {
           postBulkOps.push({
             updateOne: {
               filter: { uri: post.uri },
-              update: { $addToSet: { algoTags: this.name } },
+              update: {
+                $setOnInsert: { algoTags: [] }, // ensures array on insert
+                $addToSet: { algoTags: this.name }
+              },
               upsert: true,
             },
           })
