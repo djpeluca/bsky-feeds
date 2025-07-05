@@ -11,6 +11,7 @@ import dbClient from '../db/dbClient'
 import getUserDetails from '../addn/getUserDetails'
 import { AppBskyGraphDefs } from '@atproto/api'
 import getUserLists from '../addn/getUserLists'
+import { safeAddToSet } from '../util/safeAddToSet'
 
 dotenv.config()
 
@@ -40,6 +41,76 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
   }
 }
 
+// Main Uruguay pattern(s)
+const MAIN_PATTERNS = [
+  /\b(?!uruguaiana\b)(?:urugua|montevid|charrua|tacuaremb[oó]|paysand[ú]|semana de turismo|semana de la cerveza|daym[áa]n|guaviyú|arapey|🇺🇾|punta del este|yorugua|U R U G U A Y|Jose Mujica|Jos[eé] Mujica|Pepe Mujica|Carolina Cosse|Yamand[uú] Orsi|[aá]lvaro Delgado|Blanca Rodr[ií]guez|Valeria Ripoll|Lacalle Pou|Batllismo|Willsonismo|Herrerismo|Batllista|Willsonista|herrerista|peñarol|Parque Rod[oó])\b/i,
+];
+
+// Location patterns
+const LOCATION_PATTERNS = [
+  /\bColonia del Sacramento\b/i,
+  /\bCabo Polonio\b/i,
+  /\bPiri[aá]polis\b/i,
+  /\bValizas\b/i,
+  /\bAguas Dulces\b/i,
+  /\bLaguna Garz[oó]n\b/i,
+  /\bMercado del Puerto\b/i,
+  /\bCerro San Antonio\b/i,
+  /\bTermas del Daym[aá]n\b/i,
+  /\bSalto Grande\b/i,
+  /\bPocitos\b/i,
+  /\bPunta Carretas\b/i,
+  /\bMalv[ií]n\b/i,
+  /\bVilla Española\b/i,
+  /\bBañados de Carrasco\b/i,
+  /\bCasab[oó]\b/i,
+  /\bPaso de la Arena\b/i,
+  /\bJacinto Vera\b/i,
+  /\bVilla Dolores\b/i,
+  /\bLas Acacias\b/i,
+  /\bNuevo Par[ií]s\b/i,
+  /\bFlor de Maroñas\b/i,
+  /\bCerrito de la Victoria\b/i,
+];
+
+// People patterns
+const PEOPLE_PATTERNS = [
+  /\bJos[eé] Gervasio Artigas\b/i,
+  /\bJos[eé] Enrique Rod[oó]\b/i,
+  /\bJuana de Ibarbourou\b/i,
+  /\bMario Benedetti\b/i,
+  /\bEduardo Galeano\b/i,
+  /\bLuis Su[aá]rez\b/i,
+  /\bEdinson Cavani\b/i,
+  /\bDiego Forl[aá]n\b/i,
+  /\b[oó]scar Tab[aá]rez\b/i,
+  /\bEnzo Francescoli\b/i,
+  /\bAlfredo Zitarrosa\b/i,
+  /\bCarlos Gardel\b/i,
+  /\bRub[eé]n Rada\b/i,
+  /\bJorge Drexler\b/i,
+  /\bChina Zorrilla\b/i,
+  /\bFede [aá]lvarez\b/i,
+  /\bFede Vigevani\b/i,
+  /\bDaniel Hendler\b/i,
+  /\bJos[eé] Mujica\b/i,
+  /\bTabar[eé] V[aá]zquez\b/i,
+  /\bLuis Lacalle Pou\b/i,
+  /\bJulio Mar[ií]a Sanguinetti\b/i,
+];
+
+// Institution patterns
+const INSTITUTION_PATTERNS = [
+  /\budelar\b/i,
+  /\bUniversidad de la rep[uú]blica\b/i,
+  /\bcuarteto de nos\b/i,
+  /\bVela puerca\b/i,
+  /\bJaime Ross\b/i,
+  /\bLeo Masliah\b/i,
+  /\bcndf\b/i,
+  /\bmauricio zunino\b/i,
+];
+
 export class manager extends AlgoManager {
   public name: string = shortname
   private authorSet: Set<string> = new Set()
@@ -57,18 +128,11 @@ export class manager extends AlgoManager {
 
   // Pre-compile all patterns for better performance
   private readonly PATTERNS = [
-    // Main Uruguay pattern - optimized with word boundaries
-    /\b(?!uruguaiana\b)(?:urugua|montevid|charrua|tacuaremb[oó]|paysand[ú]|semana de turismo|semana de la cerveza|daym[áa]n|guaviyú|arapey|🇺🇾|punta del este|yorugua|U R U G U A Y|Jose Mujica|Jos[eé] Mujica|Pepe Mujica|Carolina Cosse|Yamand[uú] Orsi|[aá]lvaro Delgado|Blanca Rodr[ií]guez|Valeria Ripoll|Lacalle Pou|Batllismo|Willsonismo|Herrerismo|Batllista|Willsonista|herrerista|peñarol|Parque Rod[oó])\b/i,
-    
-    // Location patterns - simplified word boundaries
-    /\b(?:Colonia del Sacramento|Cabo Polonio|Piri[aá]polis|Valizas|Aguas Dulces|Laguna Garz[oó]n|Mercado del Puerto|Cerro San Antonio|Termas del Daym[aá]n|Salto Grande|Pocitos|Punta Carretas|Malv[ií]n|Villa Española|Bañados de Carrasco|Casab[oó]|Paso de la Arena|Jacinto Vera|Villa Dolores|Las Acacias|Nuevo Par[ií]s|Flor de Maroñas|Cerrito de la Victoria)\b/i,
-    
-    // People patterns - simplified
-    /\b(?:Jos[eé] Gervasio Artigas|Jos[eé] Enrique Rod[oó]|Juana de Ibarbourou|Mario Benedetti|Eduardo Galeano|Luis Su[aá]rez|Edinson Cavani|Diego Forl[aá]n|[oó]scar Tab[aá]rez|Enzo Francescoli|Alfredo Zitarrosa|Carlos Gardel|Rub[eé]n Rada|Jorge Drexler|China Zorrilla|Fede [aá]lvarez|Fede Vigevani|Daniel Hendler|Jos[eé] Mujica|Tabar[eé] V[aá]zquez|Luis Lacalle Pou|Julio Mar[ií]a Sanguinetti)\b/i,
-    
-    // Institution patterns
-    /\b(?:udelar|Universidad de la rep[uú]blica|cuarteto de nos|Vela puerca|Jaime Ross|Leo Masliah|cndf|mauricio zunino)\b/i,
-  ]
+    ...MAIN_PATTERNS,
+    ...LOCATION_PATTERNS,
+    ...PEOPLE_PATTERNS,
+    ...INSTITUTION_PATTERNS,
+  ];
 
   public async start() {
     await this.compilePatterns()
@@ -241,38 +305,14 @@ export class manager extends AlgoManager {
         }
       }
 
-      // Self-healing post updates
-      for (const { posts } of batchResults) {
-        for (const post of posts) {
-          try {
-            await this.db.bulkWrite('post', [{
-              updateOne: {
-                filter: { uri: post.uri },
-                update: { $addToSet: { algoTags: this.name } },
-                upsert: true,
-              },
-            }])
-          } catch (err: any) {
-            if (err.message && err.message.includes('Cannot apply $addToSet to non-array field')) {
-              // Heal the document and retry
-              await this.db.bulkWrite('post', [{
-                updateOne: {
-                  filter: { uri: post.uri },
-                  update: { $set: { algoTags: [] } },
-                  upsert: false,
-                },
-              }])
-              await this.db.bulkWrite('post', [{
-                updateOne: {
-                  filter: { uri: post.uri },
-                  update: { $addToSet: { algoTags: this.name } },
-                  upsert: true,
-                },
-              }])
-            } else {
-              console.error('Error updating post:', err)
-            }
-          }
+      // Efficient, batched, safe addToSet for posts
+      const allValidPosts = batchResults.flatMap(({ posts }) => posts)
+      if (allValidPosts.length > 0) {
+        try {
+          // Import the utility at the top: import { safeAddToSet } from '../utils/safeAddToSet'
+          await safeAddToSet(this.db, allValidPosts, this.name)
+        } catch (err) {
+          console.error('Error in safeAddToSet for posts:', err)
         }
       }
     }
@@ -296,31 +336,32 @@ export class manager extends AlgoManager {
       if (this.agent === null) return false
     }
 
-    // Check blocked members first (fastest check)
-    if (this.blockedSet.has(post.author)) {
-      return false
-    }
+    if (this.blockedSet.has(post.author)) return false
+    if (this.authorSet.has(post.author)) return true
 
-    // Check whitelisted authors (fast check)
-    if (this.authorSet.has(post.author)) {
-      return true
-    }
-
-    // Build matchString efficiently
     const matchString = this.buildMatchString(post)
-    
-    // Check pattern cache first
     const cacheKey = `${post.uri}:${matchString}`
     if (this.patternCache.has(cacheKey)) {
       return this.patternCache.get(cacheKey)!
     }
 
-    // Test patterns
-    const matches = this.compiledPatterns.some(pattern => pattern.test(matchString))
-    
-    // Cache result
+    // Grouped pattern matching for early exit
+    const groups = [
+      MAIN_PATTERNS,
+      LOCATION_PATTERNS,
+      PEOPLE_PATTERNS,
+      INSTITUTION_PATTERNS,
+    ];
+
+    let matches = false;
+    for (const group of groups) {
+      if (group.some(pattern => pattern.test(matchString))) {
+        matches = true;
+        break;
+      }
+    }
+
     this.patternCache.set(cacheKey, matches)
-    
     return matches
   }
 
