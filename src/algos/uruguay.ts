@@ -108,24 +108,34 @@ export class manager extends AlgoManager {
 
     try {
       // Update author list
-      if (process.env.URUGUAY_LISTS) {
-        const lists: string[] = `${process.env.URUGUAY_LISTS}`.split('|')
-        const listMembersPromises = lists.map(list => this.getCachedListMembers(list))
-        const allMembers = await Promise.all(listMembersPromises)
-        this.authorSet = new Set(allMembers.flat())
+      if (process.env.URUGUAY_LISTS && process.env.URUGUAY_LISTS.trim() !== '') {
+        const lists: string[] = `${process.env.URUGUAY_LISTS}`.split('|').filter(list => list.trim() !== '')
+        if (lists.length > 0) {
+          const listMembersPromises = lists.map(list => this.getCachedListMembers(list))
+          const allMembers = await Promise.all(listMembersPromises)
+          this.authorSet = new Set(allMembers.flat())
+        }
+      } else {
+        console.warn(`${this.name}: URUGUAY_LISTS environment variable not set or empty`)
+        this.authorSet = new Set()
       }
 
       // Update blocked members
-      if (process.env.BLOCKLIST) {
-        const blockLists: string[] = `${process.env.BLOCKLIST}`.split('|')
-        const blockedMembersPromises = blockLists.map(list => this.getCachedListMembers(list))
-        const allBlockedMembers = await Promise.all(blockedMembersPromises)
-        this.blockedSet = new Set(allBlockedMembers.flat())
+      if (process.env.BLOCKLIST && process.env.BLOCKLIST.trim() !== '') {
+        const blockLists: string[] = `${process.env.BLOCKLIST}`.split('|').filter(list => list.trim() !== '')
+        if (blockLists.length > 0) {
+          const blockedMembersPromises = blockLists.map(list => this.getCachedListMembers(list))
+          const allBlockedMembers = await Promise.all(blockedMembersPromises)
+          this.blockedSet = new Set(allBlockedMembers.flat())
+        }
+      } else {
+        this.blockedSet = new Set()
       }
 
       this.lastListUpdate = now
     } catch (error) {
       console.error(`${this.name}: Error updating lists:`, error)
+      // Keep existing sets on error to prevent complete failure
     }
   }
 
@@ -135,31 +145,43 @@ export class manager extends AlgoManager {
   public async periodicTask() {
     dotenv.config()
 
-    await this.db.removeTagFromOldPosts(
-      this.name,
-      Date.now() - 7 * 24 * 60 * 60 * 1000,
-    )
+    try {
+      await this.db.removeTagFromOldPosts(
+        this.name,
+        Date.now() - 7 * 24 * 60 * 60 * 1000,
+      )
+    } catch (error) {
+      console.error(`${this.name}: Error removing old posts:`, error)
+    }
 
     await this.updateLists()
 
-    // Get current database authors
-    const db_authors = await dbClient.getDistinctFromCollection(
-      this.author_collection,
-      'did',
-    )
+    try {
+      // Get current database authors
+      const db_authors = await dbClient.getDistinctFromCollection(
+        this.author_collection,
+        'did',
+      )
 
-    const dbAuthorSet = new Set(db_authors)
-    const new_authors = Array.from(this.authorSet).filter(member => !dbAuthorSet.has(member))
-    const del_authors = db_authors.filter(member => !this.authorSet.has(member))
+      const dbAuthorSet = new Set(db_authors)
+      const new_authors = Array.from(this.authorSet).filter(member => !dbAuthorSet.has(member))
+      const del_authors = db_authors.filter(member => !this.authorSet.has(member))
 
-    // Remove tags for deleted authors in bulk
-    if (del_authors.length > 0) {
-      await this.db.deleteManyDID(this.author_collection, del_authors)
-    }
+      // Remove tags for deleted authors in bulk
+      if (del_authors.length > 0) {
+        try {
+          await this.db.deleteManyDID(this.author_collection, del_authors)
+        } catch (error) {
+          console.error(`${this.name}: Error deleting authors:`, error)
+        }
+      }
 
-    // Process new authors in batches
-    if (new_authors.length > 0) {
-      await this.processNewAuthors(new_authors)
+      // Process new authors in batches
+      if (new_authors.length > 0) {
+        await this.processNewAuthors(new_authors)
+      }
+    } catch (error) {
+      console.error(`${this.name}: Error in periodic task database operations:`, error)
     }
 
     // Clear pattern cache periodically to prevent memory bloat
@@ -198,12 +220,13 @@ export class manager extends AlgoManager {
 
       const batchResults = await Promise.all(batchPromises)
       
-      // Prepare bulk operations
-      const bulkOps: any[] = batchResults.flatMap(({ author, posts }) => {
-        const ops: any[] = []
-        
-        // Add author to collection
-        ops.push({
+      // Prepare bulk operations for posts
+      const postBulkOps: any[] = []
+      const authorBulkOps: any[] = []
+      
+      batchResults.forEach(({ author, posts }) => {
+        // Add author to list_members collection
+        authorBulkOps.push({
           updateOne: {
             filter: { did: author },
             update: { $set: { did: author } },
@@ -211,9 +234,9 @@ export class manager extends AlgoManager {
           },
         })
 
-        // Add posts with tags
+        // Add posts with tags to post collection
         posts.forEach(post => {
-          ops.push({
+          postBulkOps.push({
             updateOne: {
               filter: { uri: post.uri },
               update: { $addToSet: { algoTags: this.name } },
@@ -221,13 +244,23 @@ export class manager extends AlgoManager {
             },
           })
         })
-
-        return ops
       })
 
-      // Execute bulk operations
-      if (bulkOps.length > 0) {
-        await this.db.bulkWrite('post', bulkOps)
+      // Execute bulk operations separately for each collection
+      if (authorBulkOps.length > 0) {
+        try {
+          await this.db.bulkWrite(this.author_collection, authorBulkOps)
+        } catch (error) {
+          console.error(`Error updating authors in ${this.author_collection}:`, error)
+        }
+      }
+
+      if (postBulkOps.length > 0) {
+        try {
+          await this.db.bulkWrite('post', postBulkOps)
+        } catch (error) {
+          console.error('Error updating posts:', error)
+        }
       }
     }
   }
