@@ -1,14 +1,11 @@
 import { QueryParams } from '../lexicon/types/app/bsky/feed/getFeedSkeleton'
 import { AppContext } from '../config'
-import { AlgoManager } from '../addn/algoManager'
+import { BaseFeedManager } from './BaseFeedManager'
 import dotenv from 'dotenv'
-import { Post } from '../db/schema'
 import dbClient from '../db/dbClient'
-import getUserDetails from '../addn/getUserDetails'
 
 dotenv.config()
 
-// max 15 chars
 export const shortname = 'salesforce'
 
 export const handler = async (ctx: AppContext, params: QueryParams) => {
@@ -34,78 +31,71 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
   }
 }
 
-export class manager extends AlgoManager {
-  public name: string = shortname
+export class manager extends BaseFeedManager {
+  public name = shortname
+  public author_collection = 'list_members'
+  protected PATTERNS = [
+    ...[
+      '#Salesforce',
+      '#DF23',
+      'Salesforce',
+      'Data Cloud',
+      '#SalesforceSaturday',
+      '#TrailblazerCommunity',
+      'Salesforce+',
+      'Dreamforce',
+      'AwesomeAdmin',
+      'Agent Force',
+      'Agentforce',
+      'DF25',
+      'DX25',
+      'DubaiDreamin',
+      'Dubai Dreamin',
+      'Salesforce+',
+      'DD24',
+      'sfdx',
+      'sfdc',
+      'Einstein Conversation Insights',
+      'MuleSoft',
+      'Hyperforce',
+      'Sales GPT',
+      'Einstein Vision AI',
+      'Salesblazer',
+      'foodforce',
+    ].map(term => new RegExp(`(^|[\\s\\W])${term}($|[\\W\\s])`, 'im'))
+  ];
+  protected LISTS_ENV = 'SALESFORCE_LISTS';
 
-  public matchPatterns: RegExp[] = [
-    '#Salesforce',
-    '#DF23',
-    'Salesforce',
-    'Data Cloud',
-    '#SalesforceSaturday',
-    '#TrailblazerCommunity',
-    'Salesforce+',
-    'Dreamforce',
-    'AwesomeAdmin',
-    'Agent Force',
-    'Agentforce',
-    'DF25',
-    'DX25',
-    'DubaiDreamin',
-    'Dubai Dreamin',
-    'Salesforce+',
-    'DD24',
-    'sfdx',
-    'sfdc',
-    'Einstein Conversation Insights',
-    'MuleSoft',
-    'Hyperforce',
-    'Sales GPT',
-    'Einstein Vision AI',
-    'Salesblazer',
-    'foodforce',
-  ].map(term => new RegExp(`(^|[\\s\\W])${term}($|[\\W\\s])`, 'im'));
+  public async filter_post(post: any): Promise<boolean> {
+    // Exclude specific authors
+    if ([
+      'did:plc:mcb6n67plnrlx4lg35natk2b',
+      'did:plc:pcpvhedjrmiu2x6hwe33qpvm',
+      'did:plc:pdvjdejvjinix4lnt4sgzg7r',
+    ].includes(post.author)) return false
 
-  // Include Argentinian users here to always include their posts
-  public matchUsers: string[] = [
-    //
-  ]
-
-  // Exclude posts from these users
-  public bannedUsers: string[] = [
-    //
-  ]
-
-  public async periodicTask() {
-    await this.db.removeTagFromOldPosts(
-      this.name,
-      new Date().getTime() - 7 * 24 * 60 * 60 * 1000,
-    )
-  }
-
-  public async filter_post(post: Post): Promise<Boolean> {
-    if (post.author === 'did:plc:mcb6n67plnrlx4lg35natk2b' || post.author === 'did:plc:pcpvhedjrmiu2x6hwe33qpvm' || post.author === 'did:plc:pdvjdejvjinix4lnt4sgzg7r') return false // sorry nowbreezing.ntw.app
-    if (this.agent === null) {
-      await this.start()
+    const parts: string[] = []
+    if (post.text) parts.push(post.text)
+    if (post.tags?.length) parts.push(post.tags.join(' '))
+    if (post.embed?.alt) parts.push(post.embed.alt)
+    if (post.embed?.media?.alt) parts.push(post.embed.media.alt)
+    if (post.embed?.images?.length) {
+      const imageAlts = post.embed.images.map((img: any) => img.alt).filter(Boolean)
+      if (imageAlts.length) parts.push(imageAlts.join(' '))
     }
-    if (this.agent === null) return false
-
-    let match = false
-
-    // Build matchString from post properties
-    const matchString = [
-      post.embed?.images?.map(image => image.alt).join(' ') ?? '',
-      post.embed?.alt ?? '',
-      post.embed?.media?.alt ?? '',
-      post.tags?.join(' ') ?? '',
-      post.text
-    ].join(' ');
-
-    const lowerCaseMatchString = matchString.toLowerCase();
-
-    // Combine match checks
-    return (
-      this.matchPatterns.some(pattern => lowerCaseMatchString.match(pattern))
-    );
+    const matchString = parts.join(' ').toLowerCase()
+    const cacheKey = `${post.uri}:${matchString}`
+    if (this.patternCache.has(cacheKey)) {
+      return this.patternCache.get(cacheKey)!
+    }
+    let matches = false
+    for (const pattern of this.PATTERNS) {
+      if (pattern.test(matchString)) {
+        matches = true
+        break
+      }
+    }
+    this.patternCache.set(cacheKey, matches)
+    return matches
   }
 }
