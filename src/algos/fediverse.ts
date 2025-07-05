@@ -1,13 +1,11 @@
 import { QueryParams } from '../lexicon/types/app/bsky/feed/getFeedSkeleton'
 import { AppContext } from '../config'
-import { AlgoManager } from '../addn/algoManager'
+import { BaseFeedManager } from './BaseFeedManager'
 import dotenv from 'dotenv'
-import { Post } from '../db/schema'
 import dbClient from '../db/dbClient'
 
 dotenv.config()
 
-// max 15 chars
 export const shortname = 'fediverse'
 
 export const handler = async (ctx: AppContext, params: QueryParams) => {
@@ -33,77 +31,66 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
   }
 }
 
-export class manager extends AlgoManager {
-  public name: string = shortname
+export class manager extends BaseFeedManager {
+  public name = shortname
+  public author_collection = 'list_members'
+  protected PATTERNS = [
+    // All your fediverse patterns here, as RegExp
+    ...[
+      'fediverse',
+      'fediverso',
+      'mastodon',
+      'pixelfed',
+      'activitypub',
+      'ActivityStream',
+      'pleroma',
+      'Akkoma',
+      'friendica',
+      'funkwhale',
+      'gnu social',
+      'peertube',
+      'diaspora',
+      'hubzilla',
+      'firefish',
+      'Fedifollow',
+      'WebFinger',
+      'Fediblock',
+      'Kbin',
+      'RFC 9227',
+      'RFC9227',
+      'RFC 3987',
+      'RFC3987',
+      'Internationalized Resource Identifier',
+    ].map(term => new RegExp(`(^|[\\s\\W])${term}($|[\\W\\s])`, 'im'))
+  ];
+  protected LISTS_ENV = 'FEDIVERSE_LISTS';
 
-  public matchPatterns: RegExp[] = [
-    'fediverse',
-    'fediverso',
-    'mastodon',
-    'pixelfed',
-    'activitypub',
-    'ActivityStream',
-    'pleroma',
-    'Akkoma',
-    'friendica',
-    'funkwhale',
-    'gnu social',
-    'peertube',
-    'diaspora',
-    'hubzilla',
-    'firefish',
-    'Fedifollow',
-    'WebFinger',
-    'Fediblock',
-    'Kbin',
-    'RFC 9227',
-    'RFC9227',
-    'RFC 3987',
-    'RFC3987',
-    'Internationalized Resource Identifier',
-   ].map(term => new RegExp(`(^|[\\s\\W])${term}($|[\\W\\s])`, 'im'));
+  public async filter_post(post: any): Promise<boolean> {
+    // Exclude specific authors
+    if (post.author === 'did:plc:mcb6n67plnrlx4lg35natk2b' || post.author === 'did:plc:zwxl6dnun52q3ywiao2ad3if') return false
 
-
-  // Include Argentinian users here to always include their posts
-  public matchUsers: string[] = [
-    //
-  ]
-
-  // Exclude posts from these users
-  public bannedUsers: string[] = [
-    //
-  ]
-
-  public async periodicTask() {
-    await this.db.removeTagFromOldPosts(
-      this.name,
-      new Date().getTime() - 7 * 24 * 60 * 60 * 1000,
-    )
-  }
-
-  public async filter_post(post: Post): Promise<Boolean> {
-    if (post.author === 'did:plc:mcb6n67plnrlx4lg35natk2b' || post.author === 'did:plc:zwxl6dnun52q3ywiao2ad3if') return false // sorry nowbreezing.ntw.app and FlipboardBR.flipboard.com.ap.brid.gy
-    if (this.agent === null) {
-      await this.start()
+    const parts: string[] = []
+    if (post.text) parts.push(post.text)
+    if (post.tags?.length) parts.push(post.tags.join(' '))
+    if (post.embed?.alt) parts.push(post.embed.alt)
+    if (post.embed?.media?.alt) parts.push(post.embed.media.alt)
+    if (post.embed?.images?.length) {
+      const imageAlts = post.embed.images.map((img: any) => img.alt).filter(Boolean)
+      if (imageAlts.length) parts.push(imageAlts.join(' '))
     }
-    if (this.agent === null) return false
-
-    let match = false
-
-    // Build matchString from post properties
-    const matchString = [
-      post.embed?.images?.map(image => image.alt).join(' ') ?? '',
-      post.embed?.alt ?? '',
-      post.embed?.media?.alt ?? '',
-      post.tags?.join(' ') ?? '',
-      post.text
-    ].join(' ');
-
-    const lowerCaseMatchString = matchString.toLowerCase();
-
-    // Combine match checks
-    return (
-      this.matchPatterns.some(pattern => lowerCaseMatchString.match(pattern))
-    );
+    const matchString = parts.join(' ').toLowerCase()
+    const cacheKey = `${post.uri}:${matchString}`
+    if (this.patternCache.has(cacheKey)) {
+      return this.patternCache.get(cacheKey)!
+    }
+    let matches = false
+    for (const pattern of this.PATTERNS) {
+      if (pattern.test(matchString)) {
+        matches = true
+        break
+      }
+    }
+    this.patternCache.set(cacheKey, matches)
+    return matches
   }
 }
