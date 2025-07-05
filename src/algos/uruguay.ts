@@ -220,12 +220,9 @@ export class manager extends AlgoManager {
 
       const batchResults = await Promise.all(batchPromises)
       
-      // Prepare bulk operations for posts
-      const postBulkOps: any[] = []
+      // Prepare bulk operations for authors
       const authorBulkOps: any[] = []
-      
-      batchResults.forEach(({ author, posts }) => {
-        // Add author to list_members collection
+      batchResults.forEach(({ author }) => {
         authorBulkOps.push({
           updateOne: {
             filter: { did: author },
@@ -233,22 +230,9 @@ export class manager extends AlgoManager {
             upsert: true,
           },
         })
-
-        // Add posts with tags to post collection
-        posts.forEach(post => {
-          postBulkOps.push({
-            updateOne: {
-              filter: { uri: post.uri },
-              update: {
-                $addToSet: { algoTags: this.name }
-              },
-              upsert: true,
-            },
-          })
-        })
       })
 
-      // Execute bulk operations separately for each collection
+      // Execute author bulk operations
       if (authorBulkOps.length > 0) {
         try {
           await this.db.bulkWrite(this.author_collection, authorBulkOps)
@@ -257,11 +241,38 @@ export class manager extends AlgoManager {
         }
       }
 
-      if (postBulkOps.length > 0) {
-        try {
-          await this.db.bulkWrite('post', postBulkOps)
-        } catch (error) {
-          console.error('Error updating posts:', error)
+      // Self-healing post updates
+      for (const { posts } of batchResults) {
+        for (const post of posts) {
+          try {
+            await this.db.bulkWrite('post', [{
+              updateOne: {
+                filter: { uri: post.uri },
+                update: { $addToSet: { algoTags: this.name } },
+                upsert: true,
+              },
+            }])
+          } catch (err: any) {
+            if (err.message && err.message.includes('Cannot apply $addToSet to non-array field')) {
+              // Heal the document and retry
+              await this.db.bulkWrite('post', [{
+                updateOne: {
+                  filter: { uri: post.uri },
+                  update: { $set: { algoTags: [] } },
+                  upsert: false,
+                },
+              }])
+              await this.db.bulkWrite('post', [{
+                updateOne: {
+                  filter: { uri: post.uri },
+                  update: { $addToSet: { algoTags: this.name } },
+                  upsert: true,
+                },
+              }])
+            } else {
+              console.error('Error updating post:', err)
+            }
+          }
         }
       }
     }
