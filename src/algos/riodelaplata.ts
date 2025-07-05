@@ -9,18 +9,12 @@ import { getListMembers } from '../addn/getListMembers'
 import { manager as UruguayManager } from './uruguay'
 import { manager as ArgentinaManager } from './argentina'
 import { Agent } from '@atproto/api'
+import { BaseFeedManager } from './BaseFeedManager'
 
 dotenv.config()
 
 // max 15 chars
 export const shortname = 'riodelaplata'
-
-const RIO_PATTERNS = [
-  /(^|[\s\W])Rio de la Plata($|[\W\s])/im,
-  /(^|[\s\W])dulce de leche($|[\W\s])/im,
-  /(^|[\s\W])carpincho($|[\W\s])/im,
-  /(^|[\s\W])🧉($|[\W\s])/im,
-];
 
 
 export const handler = async (ctx: AppContext, params: QueryParams) => {
@@ -55,22 +49,31 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
   return { cursor, feed }
 }
 
-export class manager {
+export class manager extends BaseFeedManager {
   private uruguay: UruguayManager
   private argentina: ArgentinaManager
+  protected PATTERNS = [
+    /(^|[\s\W])Rio de la Plata($|[\W\s])/im,
+    /(^|[\s\W])dulce de leche($|[\W\s])/im,
+    /(^|[\s\W])carpincho($|[\W\s])/im,
+    /(^|[\s\W])🧉($|[\W\s])/im,
+  ];
+  protected LISTS_ENV = '';
+  public name = shortname;
+  public author_collection = '';
 
   constructor(db: any, agent: Agent) {
-    this.uruguay = new UruguayManager(db, agent)
-    this.argentina = new ArgentinaManager(db, agent)
+    super(db, agent);
+    this.uruguay = new UruguayManager(db, agent);
+    this.argentina = new ArgentinaManager(db, agent);
   }
 
   async start() {
-    await this.uruguay.start()
-    await this.argentina.start()
+    await this.uruguay.start();
+    await this.argentina.start();
   }
 
-  async filter_post(post: any): Promise<boolean> {
-    // Check special Rio patterns first
+  public async filter_post(post: any): Promise<boolean> {
     const matchString = [
       post.text,
       ...(post.tags || []),
@@ -79,11 +82,9 @@ export class manager {
       ...(post.embed?.images?.map((img: any) => img.alt) || [])
     ].filter(Boolean).join(' ').toLowerCase();
 
-    if (RIO_PATTERNS.some(pattern => pattern.test(matchString))) {
+    if (this.PATTERNS.some(pattern => pattern.test(matchString))) {
       return true;
     }
-
-    // Then check Uruguay and Argentina feeds
     return !!(await this.uruguay.filter_post(post)) || !!(await this.argentina.filter_post(post));
   }
 }
