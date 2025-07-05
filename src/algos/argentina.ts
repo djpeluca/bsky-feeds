@@ -11,34 +11,72 @@ import dbClient from '../db/dbClient'
 import getUserDetails from '../addn/getUserDetails'
 import { AppBskyGraphDefs } from '@atproto/api'
 import getUserLists from '../addn/getUserLists'
+import { safeAddToSet } from '../util/safeAddToSet'
 
 dotenv.config()
 
-// max 15 chars
 export const shortname = 'argentina'
 
-export const handler = async (ctx: AppContext, params: QueryParams) => {
-  const builder = await dbClient.getLatestPostsForTag({
-    tag: shortname,
-    limit: params.limit,
-    cursor: params.cursor,
-  })
+// Main Argentina pattern(s)
+const MAIN_PATTERNS = [
+  /(^|[\s\W])🇦🇷($|[\W\s])/im,
+  /(^|[\s\W])Argenti($|[\W\s])/im,
+  /(^|[\s\W])Argento($|[\W\s])/im,
+  /(^|[\s\W])Argenta($|[\W\s])/im,
+  /(^|[\s\W])Milei($|[\W\s])/im,
+  /(^|[\s\W])Cyberciruj($|[\W\s])/im,
+  /(^|[\s\W])TwitterArg($|[\W\s])/im,
+];
 
-  let feed = builder.map((row) => ({
-    post: row.uri,
-  }))
+// Location patterns
+const LOCATION_PATTERNS = [
+  /(^|[\s\W])Buenos Aires($|[\W\s])/im,
+  /(^|[\s\W])Tierra del Fuego($|[\W\s])/im,
+  /(^|[\s\W])Gualeguaych[úu]($|[\W\s])/im,
+  /(^|[\s\W])Capital Federal($|[\W\s])/im,
+  /(^|[\s\W])Puerto Madero($|[\W\s])/im,
+  /(^|[\s\W])Patagonia($|[\W\s])/im,
+  /(^|[\s\W])La Bombonera($|[\W\s])/im,
+  /(^|[\s\W])Monumental de Nuñez($|[\W\s])/im,
+  /(^|[\s\W])Casa Rosada($|[\W\s])/im,
+  /(^|[\s\W])Perito Moreno($|[\W\s])/im,
+  /(^|[\s\W])San Mart[ií]n de los Andes($|[\W\s])/im,
+];
 
-  let cursor: string | undefined
-  const last = builder.at(-1)
-  if (last) {
-    cursor = `${new Date(last.indexedAt).getTime()}::${last.cid}`
-  }
+// People patterns
+const PEOPLE_PATTERNS = [
+  /(^|[\s\W])Maradona($|[\W\s])/im,
+  /(^|[\s\W])Lionel Messi($|[\W\s])/im,
+  /(^|[\s\W])Eva Per[óo]n($|[\W\s])/im,
+  /(^|[\s\W])Evita Per[óo]n($|[\W\s])/im,
+  /(^|[\s\W])Domingo Per[óo]n($|[\W\s])/im,
+  /(^|[\s\W])Juan Per[óo]n($|[\W\s])/im,
+  /(^|[\s\W])Jorge Luis Borges($|[\W\s])/im,
+  /(^|[\s\W])Mercedes Sosa($|[\W\s])/im,
+  /(^|[\s\W])Carlos Gardel($|[\W\s])/im,
+  /(^|[\s\W])Victoria Villarruel($|[\W\s])/im,
+  /(^|[\s\W])Sergio Massa($|[\W\s])/im,
+  /(^|[\s\W])Larreta($|[\W\s])/im,
+  /(^|[\s\W])Patricia Bullrich($|[\W\s])/im,
+  /(^|[\s\W])Pato Bullrich($|[\W\s])/im,
+  /(^|[\s\W])Cris Morena($|[\W\s])/im,
+  /(^|[\s\W])Spreen($|[\W\s])/im,
+  /(^|[\s\W])Colapinto($|[\W\s])/im,
+  /(^|[\s\W])Jorge Rial($|[\W\s])/im,
+  /(^|[\s\W])Susana Gimenez($|[\W\s])/im,
+  /(^|[\s\W])Kicillof($|[\W\s])/im,
+  /(^|[\s\W])Macri($|[\W\s])/im,
+];
 
-  return {
-    cursor,
-    feed,
-  }
-}
+// Political/other patterns
+const POLITICAL_PATTERNS = [
+  /(^|[\s\W])Malvinas($|[\W\s])/im,
+  /(^|[\s\W])conourbano($|[\W\s])/im,
+  /(^|[\s\W])Kirchner($|[\W\s])/im,
+  /(^|[\s\W])Alberto Fernandez($|[\W\s])/im,
+  /(^|[\s\W])Per[óo]nia($|[\W\s])/im,
+  /(^|[\s\W])Per[óo]nismo($|[\W\s])/im,
+];
 
 export class manager extends AlgoManager {
   public name: string = shortname
@@ -54,55 +92,13 @@ export class manager extends AlgoManager {
   private readonly CACHE_SIZE_LIMIT = 10000
   private listCache: Map<string, { members: string[], timestamp: number }> = new Map()
   private readonly LIST_CACHE_DURATION = 1000 * 60 * 5 // 5 minutes
-
-  // Pre-compile all patterns for better performance (from original Argentina file)
+  // Combine all for use
   private readonly PATTERNS = [
-    /(^|[\s\W])🇦🇷($|[\W\s])/im,
-    /(^|[\s\W])Argenti($|[\W\s])/im,
-    /(^|[\s\W])Argento($|[\W\s])/im,
-    /(^|[\s\W])Argenta($|[\W\s])/im,
-    /(^|[\s\W])TwitterArg($|[\W\s])/im,
-    /(^|[\s\W])Buenos Aires($|[\W\s])/im,
-    /(^|[\s\W])Malvinas($|[\W\s])/im,
-    /(^|[\s\W])Maradona($|[\W\s])/im,
-    /(^|[\s\W])conourbano($|[\W\s])/im,
-    /(^|[\s\W])Tierra del Fuego($|[\W\s])/im,
-    /(^|[\s\W])Gualeguaych[úu]($|[\W\s])/im,
-    /(^|[\s\W])Capital Federal($|[\W\s])/im,
-    /(^|[\s\W])Puerto Madero($|[\W\s])/im,
-    /(^|[\s\W])Patagonia($|[\W\s])/im,
-    /(^|[\s\W])Kirchner($|[\W\s])/im,
-    /(^|[\s\W])Alberto Fernandez($|[\W\s])/im,
-    /(^|[\s\W])Milei($|[\W\s])/im,
-    /(^|[\s\W])Cyberciruj($|[\W\s])/im,
-    /(^|[\s\W])Lionel Messi($|[\W\s])/im,
-    /(^|[\s\W])Eva Per[óo]n($|[\W\s])/im,
-    /(^|[\s\W])Evita Per[óo]n($|[\W\s])/im,
-    /(^|[\s\W])Domingo Per[óo]n($|[\W\s])/im,
-    /(^|[\s\W])Juan Per[óo]n($|[\W\s])/im,
-    /(^|[\s\W])Per[óo]nia($|[\W\s])/im,
-    /(^|[\s\W])Per[óo]nismo($|[\W\s])/im,
-    /(^|[\s\W])Jorge Luis Borges($|[\W\s])/im,
-    /(^|[\s\W])Mercedes Sosa($|[\W\s])/im,
-    /(^|[\s\W])Carlos Gardel($|[\W\s])/im,
-    /(^|[\s\W])La Bombonera($|[\W\s])/im,
-    /(^|[\s\W])Monumental de Nuñez($|[\W\s])/im,
-    /(^|[\s\W])Casa Rosada($|[\W\s])/im,
-    /(^|[\s\W])Perito Moreno($|[\W\s])/im,
-    /(^|[\s\W])San Mart[ií]n de los Andes($|[\W\s])/im,
-    /(^|[\s\W])Victoria Villarruel($|[\W\s])/im,
-    /(^|[\s\W])Sergio Massa($|[\W\s])/im,
-    /(^|[\s\W])Larreta($|[\W\s])/im,
-    /(^|[\s\W])Patricia Bullrich($|[\W\s])/im,
-    /(^|[\s\W])Pato Bullrich($|[\W\s])/im,
-    /(^|[\s\W])Cris Morena($|[\W\s])/im,
-    /(^|[\s\W])Spreen($|[\W\s])/im,
-    /(^|[\s\W])Colapinto($|[\W\s])/im,
-    /(^|[\s\W])Jorge Rial($|[\W\s])/im,
-    /(^|[\s\W])Susana Gimenez($|[\W\s])/im,
-    /(^|[\s\W])Kicillof($|[\W\s])/im,
-    /(^|[\s\W])Macri($|[\W\s])/im,
-  ]
+    ...MAIN_PATTERNS,
+    ...LOCATION_PATTERNS,
+    ...PEOPLE_PATTERNS,
+    ...POLITICAL_PATTERNS,
+  ];
 
   public async start() {
     await this.compilePatterns()
@@ -275,38 +271,13 @@ export class manager extends AlgoManager {
         }
       }
 
-      // Self-healing post updates
-      for (const { posts } of batchResults) {
-        for (const post of posts) {
-          try {
-            await this.db.bulkWrite('post', [{
-              updateOne: {
-                filter: { uri: post.uri },
-                update: { $addToSet: { algoTags: this.name } },
-                upsert: true,
-              },
-            }])
-          } catch (err: any) {
-            if (err.message && err.message.includes('Cannot apply $addToSet to non-array field')) {
-              // Heal the document and retry
-              await this.db.bulkWrite('post', [{
-                updateOne: {
-                  filter: { uri: post.uri },
-                  update: { $set: { algoTags: [] } },
-                  upsert: false,
-                },
-              }])
-              await this.db.bulkWrite('post', [{
-                updateOne: {
-                  filter: { uri: post.uri },
-                  update: { $addToSet: { algoTags: this.name } },
-                  upsert: true,
-                },
-              }])
-            } else {
-              console.error('Error updating post:', err)
-            }
-          }
+      // Efficient, batched, safe addToSet for posts
+      const allValidPosts = batchResults.flatMap(({ posts }) => posts)
+      if (allValidPosts.length > 0) {
+        try {
+          await safeAddToSet(this.db, allValidPosts, this.name)
+        } catch (err) {
+          console.error('Error in safeAddToSet for posts:', err)
         }
       }
     }
@@ -330,31 +301,32 @@ export class manager extends AlgoManager {
       if (this.agent === null) return false
     }
 
-    // Check blocked members first (fastest check)
-    if (this.blockedSet.has(post.author)) {
-      return false
-    }
+    if (this.blockedSet.has(post.author)) return false
+    if (this.authorSet.has(post.author)) return true
 
-    // Check whitelisted authors (fast check)
-    if (this.authorSet.has(post.author)) {
-      return true
-    }
-
-    // Build matchString efficiently
     const matchString = this.buildMatchString(post)
-    
-    // Check pattern cache first
     const cacheKey = `${post.uri}:${matchString}`
     if (this.patternCache.has(cacheKey)) {
       return this.patternCache.get(cacheKey)!
     }
 
-    // Test patterns
-    const matches = this.compiledPatterns.some(pattern => pattern.test(matchString))
-    
-    // Cache result
+    // Grouped pattern matching for early exit
+    const groups = [
+      MAIN_PATTERNS,
+      LOCATION_PATTERNS,
+      PEOPLE_PATTERNS,
+      POLITICAL_PATTERNS,
+    ];
+
+    let matches = false;
+    for (const group of groups) {
+      if (group.some(pattern => pattern.test(matchString))) {
+        matches = true;
+        break;
+      }
+    }
+
     this.patternCache.set(cacheKey, matches)
-    
     return matches
   }
 
