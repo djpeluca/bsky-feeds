@@ -149,20 +149,17 @@ export class manager extends BaseFeedManager {
   ];
   protected LISTS_ENV = 'RIO_DE_LA_PLATA_LISTS';
 
-  public async filter_post(post: any): Promise<boolean> {
-    const parts: string[] = [];
-    if (post.text) parts.push(post.text);
-    if (post.tags?.length) parts.push(post.tags.join(' '));
-    if (post.embed?.alt) parts.push(post.embed.alt);
-    if (post.embed?.media?.alt) parts.push(post.embed.media.alt);
-    if (post.embed?.images?.length) {
-      const imageAlts = post.embed.images.map((img: any) => img.alt).filter(Boolean);
-      if (imageAlts.length) parts.push(imageAlts.join(' '));
+  public async filter_post(post: any): Promise<Boolean> {
+    if (this.agent === null) {
+      await this.start()
+      if (this.agent === null) return false
     }
-    const matchString = parts.join(' ').toLowerCase();
-    const cacheKey = `${post.uri}:${matchString}`;
+    if (this.blockedSet.has(post.author)) return false
+    if (this.authorSet.has(post.author)) return true
+    const matchString = this.buildMatchString(post)
+    const cacheKey = `${post.uri}:${matchString}`
     if (this.patternCache.has(cacheKey)) {
-      return this.patternCache.get(cacheKey)!;
+      return this.patternCache.get(cacheKey)!
     }
     // Grouped pattern matching for early exit
     const groups = [
@@ -183,8 +180,21 @@ export class manager extends BaseFeedManager {
         break;
       }
     }
-    this.patternCache.set(cacheKey, matches);
-    return matches;
+    this.patternCache.set(cacheKey, matches)
+    return matches
+  }
+
+  private buildMatchString(post: any): string {
+    const parts: string[] = []
+    if (post.text) parts.push(post.text)
+    if (post.tags?.length) parts.push(post.tags.join(' '))
+    if (post.embed?.alt) parts.push(post.embed.alt)
+    if (post.embed?.media?.alt) parts.push(post.embed.media.alt)
+    if (post.embed?.images?.length) {
+      const imageAlts = post.embed.images.map((img: any) => img.alt).filter(Boolean)
+      if (imageAlts.length) parts.push(imageAlts.join(' '))
+    }
+    return parts.join(' ').toLowerCase()
   }
 }
 

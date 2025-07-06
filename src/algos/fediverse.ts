@@ -31,44 +31,85 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
   }
 }
 
+const MAIN_PATTERNS = [
+  /(^|[\s\W])fediverse($|[\W\s])/im,
+  /(^|[\s\W])fediverso($|[\W\s])/im,
+  /(^|[\s\W])mastodon($|[\W\s])/im,
+  /(^|[\s\W])pixelfed($|[\W\s])/im,
+  /(^|[\s\W])activitypub($|[\W\s])/im,
+];
+
+const PLATFORM_PATTERNS = [
+  /(^|[\s\W])pleroma($|[\W\s])/im,
+  /(^|[\s\W])Akkoma($|[\W\s])/im,
+  /(^|[\s\W])friendica($|[\W\s])/im,
+  /(^|[\s\W])funkwhale($|[\W\s])/im,
+  /(^|[\s\W])gnu social($|[\W\s])/im,
+  /(^|[\s\W])peertube($|[\W\s])/im,
+  /(^|[\s\W])diaspora($|[\W\s])/im,
+  /(^|[\s\W])hubzilla($|[\W\s])/im,
+  /(^|[\s\W])firefish($|[\W\s])/im,
+];
+
+const COMMUNITY_PATTERNS = [
+  /(^|[\s\W])Fedifollow($|[\W\s])/im,
+  /(^|[\s\W])WebFinger($|[\W\s])/im,
+  /(^|[\s\W])Fediblock($|[\W\s])/im,
+  /(^|[\s\W])Kbin($|[\W\s])/im,
+];
+
+const PROTOCOL_PATTERNS = [
+  /(^|[\s\W])ActivityStream($|[\W\s])/im,
+  /(^|[\s\W])RFC 9227($|[\W\s])/im,
+  /(^|[\s\W])RFC9227($|[\W\s])/im,
+  /(^|[\s\W])RFC 3987($|[\W\s])/im,
+  /(^|[\s\W])RFC3987($|[\W\s])/im,
+  /(^|[\s\W])Internationalized Resource Identifier($|[\W\s])/im,
+];
+
 export class manager extends BaseFeedManager {
   public name = shortname
   public author_collection = 'list_members'
+  // Combine for PATTERNS (optional, for compatibility)
   protected PATTERNS = [
-    // All your fediverse patterns here, as RegExp
-    ...[
-      'fediverse',
-      'fediverso',
-      'mastodon',
-      'pixelfed',
-      'activitypub',
-      'ActivityStream',
-      'pleroma',
-      'Akkoma',
-      'friendica',
-      'funkwhale',
-      'gnu social',
-      'peertube',
-      'diaspora',
-      'hubzilla',
-      'firefish',
-      'Fedifollow',
-      'WebFinger',
-      'Fediblock',
-      'Kbin',
-      'RFC 9227',
-      'RFC9227',
-      'RFC 3987',
-      'RFC3987',
-      'Internationalized Resource Identifier',
-    ].map(term => new RegExp(`(^|[\\s\\W])${term}($|[\\W\\s])`, 'im'))
+    ...MAIN_PATTERNS,
+    ...PLATFORM_PATTERNS,
+    ...COMMUNITY_PATTERNS,
+    ...PROTOCOL_PATTERNS,
   ];
   protected LISTS_ENV = 'FEDIVERSE_LISTS';
 
-  public async filter_post(post: any): Promise<boolean> {
-    // Exclude specific authors
-    if (post.author === 'did:plc:mcb6n67plnrlx4lg35natk2b' || post.author === 'did:plc:zwxl6dnun52q3ywiao2ad3if') return false
+  public async filter_post(post: any): Promise<Boolean> {
+    if (this.agent === null) {
+      await this.start()
+      if (this.agent === null) return false
+    }
+    if (this.blockedSet.has(post.author)) return false
+    if (this.authorSet.has(post.author)) return true
+    const matchString = this.buildMatchString(post)
+    const cacheKey = `${post.uri}:${matchString}`
+    if (this.patternCache.has(cacheKey)) {
+      return this.patternCache.get(cacheKey)!
+    }
+    // Grouped pattern matching for early exit
+    const groups = [
+      MAIN_PATTERNS,
+      PLATFORM_PATTERNS,
+      COMMUNITY_PATTERNS,
+      PROTOCOL_PATTERNS,
+    ];
+    let matches = false;
+    for (const group of groups) {
+      if (group.some(pattern => pattern.test(matchString))) {
+        matches = true;
+        break;
+      }
+    }
+    this.patternCache.set(cacheKey, matches)
+    return matches
+  }
 
+  private buildMatchString(post: any): string {
     const parts: string[] = []
     if (post.text) parts.push(post.text)
     if (post.tags?.length) parts.push(post.tags.join(' '))
@@ -78,19 +119,6 @@ export class manager extends BaseFeedManager {
       const imageAlts = post.embed.images.map((img: any) => img.alt).filter(Boolean)
       if (imageAlts.length) parts.push(imageAlts.join(' '))
     }
-    const matchString = parts.join(' ').toLowerCase()
-    const cacheKey = `${post.uri}:${matchString}`
-    if (this.patternCache.has(cacheKey)) {
-      return this.patternCache.get(cacheKey)!
-    }
-    let matches = false
-    for (const pattern of this.PATTERNS) {
-      if (pattern.test(matchString)) {
-        matches = true
-        break
-      }
-    }
-    this.patternCache.set(cacheKey, matches)
-    return matches
+    return parts.join(' ').toLowerCase()
   }
 }
