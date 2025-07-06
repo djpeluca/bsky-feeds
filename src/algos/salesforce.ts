@@ -68,54 +68,38 @@ const PRODUCT_PATTERNS = [
 
 const CERTIFICATION_PATTERNS = [
   /certified\s+(admin|developer|architect|consultant|specialist|marketer|analyst|designer|instructor|trainer)/i,
-  /salesforce\s+cert(ification|ified)?/i,
-  /#[a-z]*cert(s|ification)?/i,
 ];
 
 const COMMUNITY_PATTERNS = [
   /trailblazer\s+community/i,
-  /trailheadx/i,
   /trailhead\s+live/i,
-  /#ohana/i,
   /#trailheart/i,
-  /#trailblazer/i,
-  /#mvp/i,
-  /#tfx/i,
 ];
 
 const ACQUIRED_PRODUCT_PATTERNS = [
-  /heroku/i,
-  /tableau/i,
-  /slack/i,
-  /quip/i,
-  /datorama/i,
-  /krux/i,
-  /exacttarget/i,
-  /demandware/i,
-  /clicksoftware/i,
+  /\bheroku\b/i,
+  /\bslack\b/i,
+  /\bquip\b/i,
+  /\bexacttarget\b/i,
 ];
 
 const PARTNER_PATTERNS = [
-  /app exchange/i,
-  /appexchange/i,
-  /isv partner/i,
-  /consulting partner/i,
-  /partner community/i,
+  /\bapp\s+exchange\b/i,
+  /\bappexchange\b/i,
+  /\bisv\s+partner\b/i,
+  /\bconsulting\s+partner\b/i,
+  /\bpartner\s+community\b/i,
   /#sfpartner/i,
 ];
 
 const DEVELOPER_PATTERNS = [
-  /apex\s+code/i,
+  /\bapex\s+code\b/i,
   /\blwc\b/i,
-  /lightning\s+web\s+components?/i,
-  /visualforce/i,
-  /soql/i,
-  /sosl/i,
-  /metadata\s+api/i,
-  /rest\s+api/i,
-  /bulk\s+api/i,
-  /cli\s+plugin/i,
-  /sfdx\s+cli/i,
+  /\blightning\s+web\s+components?\b/i,
+  /\bvisualforce\b/i,
+  /\bsoql\b/i,
+  /\bsosl\b/i,
+  /\bsfdx\s+cli\b/i,
 ];
 
 export class manager extends BaseFeedManager {
