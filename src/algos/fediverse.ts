@@ -52,13 +52,14 @@ const PLATFORM_PATTERNS = [
 
 const COMMUNITY_PATTERNS = [
   /(^|[\s\W])Fedifollow($|[\W\s])/im,
-  /(^|[\s\W])WebFinger($|[\W\s])/im,
   /(^|[\s\W])Fediblock($|[\W\s])/im,
   /(^|[\s\W])Kbin($|[\W\s])/im,
+  /(^|[\s\W])FediCon($|[\W\s])/im,
 ];
 
 const PROTOCOL_PATTERNS = [
   /(^|[\s\W])ActivityStream($|[\W\s])/im,
+  /(^|[\s\W])WebFinger($|[\W\s])/im,
   /(^|[\s\W])RFC 9227($|[\W\s])/im,
   /(^|[\s\W])RFC9227($|[\W\s])/im,
   /(^|[\s\W])RFC 3987($|[\W\s])/im,
