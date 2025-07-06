@@ -52,18 +52,23 @@ const MAIN_PATTERNS = [
   /(^|[\s\W])LLM($|[\W\s])/im,
   /(^|[\s\W])LLMs($|[\W\s])/im,
   /(^|[\s\W])AI($|[\W\s])/im,
+  /(^|[\s\W])IA($|[\W\s])/im,
   /(^|[\s\W])reasoning model($|[\W\s])/im,
 ];
 
 // AI Models and Technologies
 const MODEL_PATTERNS = [
   /(^|[\s\W])GPT-4($|[\W\s])/im,
+  /(^|[\s\W])GPT($|[\W\s])/im,
   /(^|[\s\W])GPT-4o($|[\W\s])/im,
   /(^|[\s\W])GPT-3($|[\W\s])/im,
+  /(^|[\s\W])LatamGPT($|[\W\s])/im,
+  /(^|[\s\W])Latam-GPT($|[\W\s])/im,
   /(^|[\s\W])Claude($|[\W\s])/im,
   /(^|[\s\W])Claude 3($|[\W\s])/im,
   /(^|[\s\W])Claude 3.5($|[\W\s])/im,
   /(^|[\s\W])Gemini($|[\W\s])/im,
+  /(^|[\s\W])Grok($|[\W\s])/im,
   /(^|[\s\W])Gemini Pro($|[\W\s])/im,
   /(^|[\s\W])Gemini Ultra($|[\W\s])/im,
   /(^|[\s\W])Llama($|[\W\s])/im,
@@ -77,9 +82,7 @@ const MODEL_PATTERNS = [
   /(^|[\s\W])Transformers($|[\W\s])/im,
   /(^|[\s\W])Diffusion Model($|[\W\s])/im,
   /(^|[\s\W])Diffusion Models($|[\W\s])/im,
-  /(^|[\s\W])GAN($|[\W\s])/im,
   /(^|[\s\W])GANs($|[\W\s])/im,
-  /(^|[\s\W])VAE($|[\W\s])/im,
   /(^|[\s\W])VAEs($|[\W\s])/im,
   /(^|[\s\W])Stable Diffusion($|[\W\s])/im,
   /(^|[\s\W])DALL-E($|[\W\s])/im,
@@ -124,6 +127,7 @@ const COMPANY_PATTERNS = [
   /(^|[\s\W])Manus\.ai($|[\W\s])/im,  
   /(^|[\s\W])deepseek($|[\W\s])/im, 
   /(^|[\s\W])altimetrik($|[\W\s])/im,
+  /(^|[\s\W])X AI($|[\W\s])/im,
 ];
 
 // AI Concepts and Technologies
@@ -170,7 +174,6 @@ const CONCEPT_PATTERNS = [
   /(^|[\s\W])langchain($|[\W\s])/im,
   /(^|[\s\W])flowise($|[\W\s])/im,
   /(^|[\s\W])agentic($|[\W\s])/im,
-  /(^|[\s\W])agents($|[\W\s])/im,
 ];
 
 // AI Personalities and Researchers
@@ -189,7 +192,6 @@ const PERSONALITY_PATTERNS = [
   /(^|[\s\W])Sundar Pichai($|[\W\s])/im,
   /(^|[\s\W])Satya Nadella($|[\W\s])/im,
   /(^|[\s\W])Jensen Huang($|[\W\s])/im,
-  /(^|[\s\W])Elon Musk($|[\W\s])/im,
   /(^|[\s\W])Mark Zuckerberg($|[\W\s])/im,
   /(^|[\s\W])Jensen Huang($|[\W\s])/im,
   /(^|[\s\W])Clement Delangue($|[\W\s])/im,
