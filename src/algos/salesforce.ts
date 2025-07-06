@@ -78,8 +78,6 @@ const COMMUNITY_PATTERNS = [
 
 const ACQUIRED_PRODUCT_PATTERNS = [
   /\bheroku\b/i,
-  /\bslack\b/i,
-  /\bquip\b/i,
   /\bexacttarget\b/i,
 ];
 
