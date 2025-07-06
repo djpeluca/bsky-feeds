@@ -46,7 +46,6 @@ const PLATFORM_PATTERNS = [
   /(^|[\s\W])funkwhale($|[\W\s])/im,
   /(^|[\s\W])gnu social($|[\W\s])/im,
   /(^|[\s\W])peertube($|[\W\s])/im,
-  /(^|[\s\W])diaspora($|[\W\s])/im,
   /(^|[\s\W])hubzilla($|[\W\s])/im,
   /(^|[\s\W])firefish($|[\W\s])/im,
 ];
@@ -86,7 +85,13 @@ export class manager extends BaseFeedManager {
     }
     if (this.blockedSet.has(post.author)) return false
     if (this.authorSet.has(post.author)) return true
+    
+    // Filter out unwanted cross-posts with "Original post on" links
     const matchString = this.buildMatchString(post)
+    if (matchString.includes('original post on') || matchString.includes('[original post on')) {
+      return false
+    }
+    
     const cacheKey = `${post.uri}:${matchString}`
     if (this.patternCache.has(cacheKey)) {
       return this.patternCache.get(cacheKey)!
