@@ -15,6 +15,7 @@
     "publishSalesforce": "tsx scripts/publishSalesforce.ts",
     "publishFediverse": "tsx scripts/publishFediverse.ts",
     "publishPeniarol": "tsx scripts/publishPeñarol.ts",
+    "publishAI": "tsx scripts/publishAI.ts",
     "addSelfToList": "tsx scripts/addSelfToList.ts",
     "start": "node ./dist/index.js",
     "dev": "tsx ./src/index.ts",
