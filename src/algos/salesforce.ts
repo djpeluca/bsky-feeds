@@ -43,6 +43,7 @@ const MAIN_PATTERNS = [
   /(^|[\s\W])Agentforce($|[\W\s])/im,
 ];
 
+// Salesforce Event Patterns (Dreamin' and others)
 const EVENT_PATTERNS = [
   /(^|[\s\W])Dreamforce($|[\W\s])/im,
   /(^|[\s\W])#DF23($|[\W\s])/im,
@@ -51,7 +52,56 @@ const EVENT_PATTERNS = [
   /(^|[\s\W])DubaiDreamin($|[\W\s])/im,
   /(^|[\s\W])Dubai Dreamin($|[\W\s])/im,
   /(^|[\s\W])DD25($|[\W\s])/im,
-  /(^|[\s\W])Dreamin\b/im,
+  /(^|[\s\W])MidAtlanticDreamin\b/im,
+  /(^|[\s\W])Midwest Dreamin'?($|[\W\s])/im,
+  /(^|[\s\W])MidwestDreamin'?($|[\W\s])/im,
+  /(^|[\s\W])Texas Dreamin'?($|[\W\s])/im,
+  /(^|[\s\W])TexasDreamin'?($|[\W\s])/im,
+  /(^|[\s\W])Florida Dreamin'?($|[\W\s])/im,
+  /(^|[\s\W])FloridaDreamin'?($|[\W\s])/im,
+  /(^|[\s\W])Northeast Dreamin'?($|[\W\s])/im,
+  /(^|[\s\W])NortheastDreamin'?($|[\W\s])/im,
+  /(^|[\s\W])SouthEast Dreamin'?($|[\W\s])/im,
+  /(^|[\s\W])SouthEastDreamin'?($|[\W\s])/im,
+  /(^|[\s\W])NorCal Dreamin'?($|[\W\s])/im,
+  /(^|[\s\W])NorCalDreamin'?($|[\W\s])/im,
+  /(^|[\s\W])Forcelandia($|[\W\s])/im,
+  /(^|[\s\W])Tahoe Dreamin'?($|[\W\s])/im,
+  /(^|[\s\W])TahoeDreamin'?($|[\W\s])/im,
+  /(^|[\s\W])WITness Success($|[\W\s])/im,
+  /(^|[\s\W])WITnessSuccess($|[\W\s])/im,
+  /(^|[\s\W])Philly Dreamin'?($|[\W\s])/im,
+  /(^|[\s\W])PhillyDreamin'?($|[\W\s])/im,
+  /(^|[\s\W])London’s Calling($|[\W\s])/im,
+  /(^|[\s\W])Londons Calling($|[\W\s])/im,
+  /(^|[\s\W])LondonsCalling($|[\W\s])/im,
+  /(^|[\s\W])CzechDreamin($|[\W\s])/im,
+  /(^|[\s\W])Czech Dreamin($|[\W\s])/im,
+  /(^|[\s\W])French Touch Dreamin($|[\W\s])/im,
+  /(^|[\s\W])FrenchTouchDreamin($|[\W\s])/im,
+  /(^|[\s\W])YeurDreamin($|[\W\s])/im,
+  /(^|[\s\W])Yeur Dreamin($|[\W\s])/im,
+  /(^|[\s\W])Alps Dreamin'?($|[\W\s])/im,
+  /(^|[\s\W])AlpsDreamin'?($|[\W\s])/im,
+  /(^|[\s\W])DreamOle($|[\W\s])/im,
+  /(^|[\s\W])India Dreamin’?($|[\W\s])/im,
+  /(^|[\s\W])IndiaDreamin’?($|[\W\s])/im,
+  /(^|[\s\W])Japan Dreamin’?($|[\W\s])/im,
+  /(^|[\s\W])JapanDreamin’?($|[\W\s])/im,
+  /(^|[\s\W])Down Under Dreaming($|[\W\s])/im,
+  /(^|[\s\W])DownUnderDreaming($|[\W\s])/im,
+  /(^|[\s\W])Brasil Dreamin’?($|[\W\s])/im,
+  /(^|[\s\W])BrasilDreamin’?($|[\W\s])/im,
+  /(^|[\s\W])Dreamin’ Argentina($|[\W\s])/im,
+  /(^|[\s\W])Dreamin Argentina($|[\W\s])/im,
+  /(^|[\s\W])Africa Dreamin’?($|[\W\s])/im,
+  /(^|[\s\W])AfricaDreamin’?($|[\W\s])/im,
+  /(^|[\s\W])DevOps Dreamin’?($|[\W\s])/im,
+  /(^|[\s\W])DevOpsDreamin’?($|[\W\s])/im,
+  /(^|[\s\W])Nonprofit Dreamin’?($|[\W\s])/im,
+  /(^|[\s\W])NonprofitDreamin’?($|[\W\s])/im,
+  /(^|[\s\W])True North Dreamin’?($|[\W\s])/im,
+  /(^|[\s\W])TrueNorthDreamin’?($|[\W\s])/im,
 ];
 
 const PRODUCT_PATTERNS = [
@@ -79,6 +129,8 @@ const COMMUNITY_PATTERNS = [
 const ACQUIRED_PRODUCT_PATTERNS = [
   /\bheroku\b/i,
   /\bexacttarget\b/i,
+  /(^|[\s\W])Slack('?)(?=$|[\W\s])/,
+  /(^|[\s\W])slackapi($|[\W\s])/i,
 ];
 
 const PARTNER_PATTERNS = [
@@ -123,6 +175,8 @@ export class manager extends BaseFeedManager {
     if (this.blockedSet.has(post.author)) return false
     if (this.authorSet.has(post.author)) return true
     const matchString = this.buildMatchString(post)
+    // Exclude posts containing #F1DriveroftheDay (case-insensitive)
+    if (matchString.includes('#f1driveroftheday')) return false;
     const cacheKey = `${post.uri}:${matchString}`
     if (this.patternCache.has(cacheKey)) {
       return this.patternCache.get(cacheKey)!
