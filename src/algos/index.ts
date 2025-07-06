@@ -10,6 +10,7 @@ import * as brasil from './brasil'
 import * as salesforce from './salesforce'
 import * as fediverse from './fediverse'
 import * as peniarol from './peniarol'
+import * as ai from './ai'
 
 import * as external from './externalList'
 
@@ -39,6 +40,10 @@ const algos = {
   [salesforce.shortname]: {
     handler: <AlgoHandler>salesforce.handler,
     manager: salesforce.manager,
+  },
+  [ai.shortname]: {
+    handler: <AlgoHandler>ai.handler,
+    manager: ai.manager,
   },
   [fediverse.shortname]: {
     handler: <AlgoHandler>fediverse.handler,
