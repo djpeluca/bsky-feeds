@@ -73,8 +73,6 @@ const MODEL_PATTERNS = [
   /(^|[\s\W])Llama 2($|[\W\s])/im,
   /(^|[\s\W])Llama 3($|[\W\s])/im,
   /(^|[\s\W])Mistral AI($|[\W\s])/im,
-  /(^|[\s\W])PaLM($|[\W\s])/im,
-  /(^|[\s\W])BERT($|[\W\s])/im,
   /(^|[\s\W])Diffusion Model($|[\W\s])/im,
   /(^|[\s\W])Diffusion Models($|[\W\s])/im,
   /(^|[\s\W])Stable Diffusion($|[\W\s])/im,
@@ -119,7 +117,8 @@ const COMPANY_PATTERNS = [
   /(^|[\s\W])Manus\.ai($|[\W\s])/m,  
   /(^|[\s\W])DeepSeek($|[\W\s])/m, 
   /(^|[\s\W])Altimetrik($|[\W\s])/m,
-  /(^|[\s\W])X AI($|[\W\s])/m,
+  /(^|[\s\W])XAI($|[\W\s])/m,
+  /(^|[\s\W])Flowise($|[\W\s])/m,
 ];
 
 // AI Concepts and Technologies
@@ -152,18 +151,9 @@ const CONCEPT_PATTERNS = [
   /(^|[\s\W])Multi-modal($|[\W\s])/im,
   /(^|[\s\W])AGI($|[\W\s])/im,
   /(^|[\s\W])Artificial General Intelligence($|[\W\s])/im,
-  /(^|[\s\W])Alignment($|[\W\s])/im,
-  /(^|[\s\W])AI Alignment($|[\W\s])/im,
   /(^|[\s\W])Hallucination($|[\W\s])/im,
-  /(^|[\s\W])AI Hallucination($|[\W\s])/im,
-  /(^|[\s\W])Bias($|[\W\s])/im,
-  /(^|[\s\W])AI Bias($|[\W\s])/im,
-  /(^|[\s\W])AI Ethics($|[\W\s])/im,
-  /(^|[\s\W])Safety($|[\W\s])/im,
-  /(^|[\s\W])AI Safety($|[\W\s])/im,
   /(^|[\s\W])Vector Database($|[\W\s])/im,
   /(^|[\s\W])langchain($|[\W\s])/im,
-  /(^|[\s\W])flowise($|[\W\s])/im,
   /(^|[\s\W])agentic($|[\W\s])/im,
 ];
 
