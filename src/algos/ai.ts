@@ -33,12 +33,12 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
 
 // Main AI patterns
 const MAIN_PATTERNS = [
-  /(^|[\s\W])#AI($|[\W\s])/im,
+  /\bAI\b/g, // Only "AI"
+  /\bIA\b/g, // Only "IA"
   /(^|[\s\W])#ArtificialIntelligence($|[\W\s])/im,
   /(^|[\s\W])#GenerativeAI($|[\W\s])/im,
   /(^|[\s\W])#GenAI($|[\W\s])/im,
   /(^|[\s\W])GenAI($|[\W\s])/im,
-
   /(^|[\s\W])#MachineLearning($|[\W\s])/im,
   /(^|[\s\W])#DeepLearning($|[\W\s])/im,
   /(^|[\s\W])Artificial Intelligence($|[\W\s])/im,
@@ -51,8 +51,6 @@ const MAIN_PATTERNS = [
   /(^|[\s\W])Large Language Models($|[\W\s])/im,
   /(^|[\s\W])LLM($|[\W\s])/im,
   /(^|[\s\W])LLMs($|[\W\s])/im,
-  /(^|[\s\W])AI($|[\W\s])/im,
-  /(^|[\s\W])IA($|[\W\s])/im,
   /(^|[\s\W])reasoning model($|[\W\s])/im,
 ];
 
