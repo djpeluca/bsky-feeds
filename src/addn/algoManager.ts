@@ -23,8 +23,11 @@ export class AlgoManager {
   }
 
   public static cacheAge(params): Number {
-    if (params.cursor) return 600
-    return 30
+    // For cursor-based requests (pagination), use longer cache
+    if (params.cursor) return 300 // 5 minutes for paginated results
+    
+    // For fresh feed requests, use minimal cache for instant refresh
+    return 5 // 5 seconds only for top-level feed requests to enable near-instant refresh
   }
 
   public async _start() {
@@ -41,15 +44,25 @@ export class AlgoManager {
       taskIntervalMins = Number.parseInt(process.env.FEEDGEN_TASK_INTEVAL_MINS)
     }
 
+    const startTime = Date.now()
+    console.log(`[${this.name}] Starting periodic tasks with ${taskIntervalMins}m interval at ${new Date().toISOString()}`)
+    
     await this.periodicTask()
 
     const runPeriodicTask = async () => {
-      console.log(`${this.name}: running ${taskIntervalMins}m task`)
+      const taskStart = Date.now()
+      console.log(`[${this.name}] Running ${taskIntervalMins}m periodic task at ${new Date().toISOString()}`)
+      
       try {
         await this.periodicTask()
+        const taskDuration = Date.now() - taskStart
+        console.log(`[${this.name}] Periodic task completed in ${taskDuration}ms`)
       } catch (e) {
-        console.log(`${this.name}: error running periodic task ${e.message}`)
+        const taskDuration = Date.now() - taskStart
+        console.error(`[${this.name}] Periodic task failed after ${taskDuration}ms: ${e.message}`)
       } finally {
+        const nextRunTime = new Date(Date.now() + (taskIntervalMins * 60 * 1000))
+        console.log(`[${this.name}] Next periodic task scheduled for ${nextRunTime.toISOString()}`)
         this.periodicIntervalId = setTimeout(runPeriodicTask, taskIntervalMins * 60 * 1000)
       }
     }

@@ -15,14 +15,15 @@ export abstract class BaseFeedManager extends AlgoManager {
   protected authorSet: Set<string> = new Set()
   protected blockedSet: Set<string> = new Set()
   protected lastListUpdate = 0
-  protected readonly LIST_UPDATE_INTERVAL = 1000 * 60 * 15
+  protected readonly LIST_UPDATE_INTERVAL = 1000 * 60 * 5 // Reduced from 15 to 5 minutes for more frequent updates
   protected compiledPatterns: RegExp[] = []
   protected patternCache: Map<string, boolean> = new Map()
   protected readonly CACHE_SIZE_LIMIT = 10000
   protected listCache: Map<string, { members: string[], timestamp: number }> = new Map()
-  protected readonly LIST_CACHE_DURATION = 1000 * 60 * 5
+  protected readonly LIST_CACHE_DURATION = 1000 * 60 * 2 // Reduced from 5 to 2 minutes
 
   public async start() {
+    console.log(`[${this.name}] Starting BaseFeedManager with ${this.LIST_UPDATE_INTERVAL/60000}min list update interval`)
     await this.compilePatterns()
     await this.updateLists()
   }
@@ -40,18 +41,35 @@ export abstract class BaseFeedManager extends AlgoManager {
       return cached.members
     }
     try {
+      const fetchStart = Date.now()
       const members = await getListMembers(list, this.agent)
+      const fetchDuration = Date.now() - fetchStart
+      
+      if (fetchDuration > 5000) {
+        console.warn(`[${this.name}] Slow list fetch for ${list}: ${fetchDuration}ms`)
+      }
+      
       this.listCache.set(list, { members, timestamp: now })
+      console.log(`[${this.name}] Fetched ${members.length} members from list ${list} in ${fetchDuration}ms`)
       return members
     } catch (error) {
-      console.error(`Error fetching list members for ${list}:`, error)
+      console.error(`[${this.name}] Error fetching list members for ${list}:`, error.message)
       return cached?.members || []
     }
   }
 
   protected async updateLists() {
     const now = Date.now()
-    if (now - this.lastListUpdate < this.LIST_UPDATE_INTERVAL) return
+    const timeSinceLastUpdate = now - this.lastListUpdate
+    
+    if (timeSinceLastUpdate < this.LIST_UPDATE_INTERVAL) {
+      const timeUntilNext = this.LIST_UPDATE_INTERVAL - timeSinceLastUpdate
+      console.log(`[${this.name}] List update skipped, next update in ${Math.round(timeUntilNext/60000)}min`)
+      return
+    }
+
+    const updateStart = Date.now()
+    console.log(`[${this.name}] Starting list update at ${new Date().toISOString()}`)
 
     try {
       // Update author list
@@ -59,12 +77,15 @@ export abstract class BaseFeedManager extends AlgoManager {
       if (listsEnv && listsEnv.trim() !== '') {
         const lists: string[] = listsEnv.split('|').filter(list => list.trim() !== '')
         if (lists.length > 0) {
+          console.log(`[${this.name}] Updating ${lists.length} author lists`)
           const listMembersPromises = lists.map(list => this.getCachedListMembers(list))
           const allMembers = await Promise.all(listMembersPromises)
+          const previousSize = this.authorSet.size
           this.authorSet = new Set(allMembers.flat())
+          console.log(`[${this.name}] Author set updated: ${previousSize} -> ${this.authorSet.size} members`)
         }
       } else {
-        console.warn(`${this.name}: ${this.LISTS_ENV} environment variable not set or empty`)
+        console.warn(`[${this.name}] ${this.LISTS_ENV} environment variable not set or empty`)
         this.authorSet = new Set()
       }
 
@@ -72,17 +93,23 @@ export abstract class BaseFeedManager extends AlgoManager {
       if (process.env.BLOCKLIST && process.env.BLOCKLIST.trim() !== '') {
         const blockLists: string[] = process.env.BLOCKLIST.split('|').filter(list => list.trim() !== '')
         if (blockLists.length > 0) {
+          console.log(`[${this.name}] Updating ${blockLists.length} block lists`)
           const blockedMembersPromises = blockLists.map(list => this.getCachedListMembers(list))
           const allBlockedMembers = await Promise.all(blockedMembersPromises)
+          const previousBlockedSize = this.blockedSet.size
           this.blockedSet = new Set(allBlockedMembers.flat())
+          console.log(`[${this.name}] Blocked set updated: ${previousBlockedSize} -> ${this.blockedSet.size} members`)
         }
       } else {
         this.blockedSet = new Set()
       }
 
       this.lastListUpdate = now
+      const updateDuration = Date.now() - updateStart
+      console.log(`[${this.name}] List update completed in ${updateDuration}ms`)
     } catch (error) {
-      console.error(`${this.name}: Error updating lists:`, error)
+      const updateDuration = Date.now() - updateStart
+      console.error(`[${this.name}] List update failed after ${updateDuration}ms:`, error.message)
     }
   }
 

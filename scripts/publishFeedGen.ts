@@ -76,9 +76,9 @@ const run = async () => {
     },
   })
 
-  console.log(res)
+  console.log('[PublishFeedGen] Feed published successfully:', res.statusText)
 
-  console.log('All done 🎉')
+console.log('[PublishFeedGen] All done 🎉')
 }
 
 run()

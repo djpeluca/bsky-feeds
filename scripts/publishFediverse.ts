@@ -83,7 +83,7 @@ const run = async () => {
     },
   })
 
-  console.log('All done 🎉')
+  console.log('[PublishFediverse] All done 🎉')
 }
 
 run()

@@ -75,7 +75,7 @@ export abstract class FirehoseSubscriptionBase {
               await semaphore.acquire().then(() => {
                 this.handleEvent(evt) // no longer awaiting this
                   .catch((err) => {
-                    console.log(`err in handleEvent ${err}`)
+                    console.error(`[FirehoseSubscription] Error in handleEvent: ${err}`)
                   })
                   .finally(() => {
                     semaphore.release()

@@ -58,7 +58,7 @@ const executeBatch = async (agent: BskyAgent) => {
       resolve(resultsMap[user_did])
     })
   } catch (error) {
-    console.log(`core: error during getProfiles ${error.message}`)
+    console.error(`[getUserDetails] Error during getProfiles: ${error.message}`)
     currentResolvers.forEach(({ reject }) => reject(error))
   } finally {
     timer = null

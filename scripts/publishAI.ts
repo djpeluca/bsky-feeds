@@ -75,7 +75,7 @@ const run = async () => {
     },
   })
 
-  console.log('All done 🎉')
+  console.log('[PublishAI] All done 🎉')
 }
 
 run() 
