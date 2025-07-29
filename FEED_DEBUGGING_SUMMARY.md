@@ -6,12 +6,12 @@
 The primary issue was caused by several factors:
 
 - **Rate Limiting Configuration**: The rate limiter had `undefined` values, causing unpredictable behavior
-- **Excessive Caching**: Feed responses were cached for 30+ seconds, preventing fresh content
+- **Insufficient Connection Monitoring**: No visibility into Jetstream connection health
 - **Inefficient List Updates**: Author lists were only updated every 15 minutes
-- **No Connection Monitoring**: No visibility into Jetstream connection health
+- **Extremely Short Cache**: The moize cache was only 30 milliseconds, causing excessive re-computation
 
 ### 2. Lost Instant Refresh Functionality
-- **High Cache Times**: 30-second cache on feed generation was too aggressive
+- **Inadequate Cache Configuration**: 30ms moize cache was too short, causing constant re-execution
 - **Long List Update Intervals**: 15-minute intervals meant new authors weren't picked up quickly
 - **No Real-time Diagnostics**: Limited visibility into feed processing pipeline
 
@@ -51,19 +51,19 @@ public static cacheAge(params): Number {
 }
 ```
 
-### Feed Generation Cache Reduction (`src/methods/feed-generation.ts`)
+### Feed Generation Cache Fix (`src/methods/feed-generation.ts`)
 ```typescript
-// BEFORE: 30-second moize cache
+// BEFORE: Extremely short cache causing excessive computation
 const algoHandlerMoized = moize(algo, {
   isPromise: true,
-  maxAge: 30,  // 30 seconds
+  maxAge: 30,  // 30 MILLISECONDS - way too short!
   isShallowEqual: true,
 })
 
-// AFTER: 10-second cache for better responsiveness
+// AFTER: Reasonable cache duration
 const algoHandlerMoized = moize(algo, {
   isPromise: true,
-  maxAge: 10000,  // 10 seconds
+  maxAge: 5000,  // 5 seconds in milliseconds - balanced approach
   isShallowEqual: true,
 })
 ```
@@ -95,13 +95,13 @@ Replaced scattered `console.log` statements with structured logging:
 ## Key Performance Improvements
 
 ### 1. Instant Refresh Restoration
-- **Reduced cache from 30s to 5s** for fresh feed requests
-- **Faster list updates** (15min → 5min intervals)
-- **Optimized moize cache** (30s → 10s)
+- **Fixed moize cache**: From 30ms to 5 seconds for proper caching balance
+- **Reduced cache ages**: From 30s to 5s for fresh feed requests
+- **Faster list updates**: 15min → 5min intervals
 
 ### 2. 20+ Minute Delay Detection
 - **Connection health monitoring** detects stalled streams
-- **Rate limiting fixes** prevent request timeouts
+- **Rate limiting fixes** prevent request timeouts  
 - **Comprehensive error logging** shows exact failure points
 
 ### 3. Better Diagnostics
@@ -112,10 +112,20 @@ Replaced scattered `console.log` statements with structured logging:
 ## Environment Variable Impact
 
 The `FEEDGEN_TASK_INTEVAL_MINS` change from 20 to 1 minute was correctly implemented but additional optimizations were needed in:
-- Cache durations
-- List update frequencies  
-- Connection monitoring
-- Rate limiting configuration
+- **Cache durations** (moize was misconfigured)
+- **List update frequencies**  
+- **Connection monitoring**
+- **Rate limiting configuration**
+
+## Critical Discovery: Moize Cache Misconfiguration
+
+The biggest issue was that `maxAge: 30` in moize meant **30 milliseconds**, not 30 seconds. This caused:
+- **Constant re-computation** of feed algorithms
+- **Excessive CPU usage**
+- **Poor performance** under load
+- **No effective caching** of algorithm results
+
+The fix to 5000ms (5 seconds) provides a reasonable balance between freshness and performance.
 
 ## Monitoring Recommendations
 
@@ -159,7 +169,7 @@ The `FEEDGEN_TASK_INTEVAL_MINS` change from 20 to 1 minute was correctly impleme
 If issues occur, these files can be quickly reverted:
 - `src/addn/rateLimit.ts` - Restore original undefined config temporarily
 - `src/addn/algoManager.ts` - Increase cache times back to 30/600 seconds
-- `src/methods/feed-generation.ts` - Increase moize cache back to 30 seconds
+- `src/methods/feed-generation.ts` - Revert moize cache back to 30ms (though not recommended)
 - `src/subscription.ts` - Remove health monitoring if it causes issues
 
 The changes are backwards compatible and can be selectively reverted without breaking functionality.

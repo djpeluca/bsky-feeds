@@ -40,7 +40,7 @@ export default function (server: Server, ctx: AppContext) {
 
     const algoHandlerMoized = moize(algo, {
       isPromise: true,
-      maxAge: 10000, // Reduced from 30 seconds to 10 seconds for better instant refresh
+      maxAge: 5000, // 5 seconds in milliseconds (was 30ms before, which was too short)
       isShallowEqual: true,
     })
 
