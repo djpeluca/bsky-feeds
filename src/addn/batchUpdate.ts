@@ -3,18 +3,27 @@ import limit from './rateLimit'
 
 export default async function batchUpdate(agent, interval) {
   let firstRun = true
+  let cycleCount = 0
+  
   while (true) {
     if (!firstRun) await new Promise((resolve) => setTimeout(resolve, interval))
     else firstRun = false
 
-    console.log('core: Updating Labels...')
+    cycleCount++
+    const updateStart = Date.now()
+    console.log(`[BatchUpdate] Cycle ${cycleCount} started at ${new Date().toISOString()}, interval: ${interval/1000}s`)
 
     const unlabelledPosts = await dbClient.getUnlabelledPostsWithMedia(
       300,
       interval,
     )
 
-    if (unlabelledPosts.length === 0) continue
+    if (unlabelledPosts.length === 0) {
+      console.log(`[BatchUpdate] No unlabelled posts found in cycle ${cycleCount}`)
+      continue
+    }
+
+    console.log(`[BatchUpdate] Processing ${unlabelledPosts.length} unlabelled posts in cycle ${cycleCount}`)
 
     const chunkSize = 25
 
@@ -26,11 +35,15 @@ export default async function batchUpdate(agent, interval) {
       })
 
       let res: any
+      const chunkStart = Date.now()
 
       try {
         res = await limit(() => agent.app.bsky.feed.getPosts({ uris: chunk }))
+        const chunkDuration = Date.now() - chunkStart
+        console.log(`[BatchUpdate] Fetched chunk of ${chunk.length} posts in ${chunkDuration}ms`)
       } catch (e) {
-        console.log('core: Error fetching posts, skipping chunk...')
+        const chunkDuration = Date.now() - chunkStart
+        console.error(`[BatchUpdate] Error fetching posts chunk after ${chunkDuration}ms, skipping...`, e.message)
         continue
       }
 

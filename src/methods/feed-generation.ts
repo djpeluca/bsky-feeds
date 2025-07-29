@@ -7,6 +7,7 @@ import moize from 'moize'
 
 export default function (server: Server, ctx: AppContext) {
   server.app.bsky.feed.getFeedSkeleton(async ({ params, req, res }) => {
+    const requestStart = Date.now()
     const feedUri = new AtUri(params.feed)
     const algo = algos[feedUri.rkey].handler
     if (
@@ -39,12 +40,24 @@ export default function (server: Server, ctx: AppContext) {
 
     const algoHandlerMoized = moize(algo, {
       isPromise: true,
-      maxAge: 30, // 30 seconds
+      maxAge: 5000, // 5 seconds in milliseconds (was 30ms before, which was too short)
       isShallowEqual: true,
     })
 
     const body = await algoHandlerMoized(ctx, params)
     if (body.feed.length < params.limit) body.cursor = undefined
+
+    const requestDuration = Date.now() - requestStart
+    
+    // Log slow feed requests
+    if (requestDuration > 2000) {
+      console.warn(`[FeedGeneration] Slow feed request for ${feedUri.rkey}: ${requestDuration}ms, cache age: ${cacheAge}s, results: ${body.feed.length}`)
+    }
+    
+    // Log periodic stats for feed requests
+    if (Math.random() < 0.01) { // 1% sampling for monitoring
+      console.log(`[FeedGeneration] Feed ${feedUri.rkey} request: ${requestDuration}ms, cache: ${cacheAge}s, cursor: ${params.cursor ? 'yes' : 'no'}, results: ${body.feed.length}`)
+    }
 
     return {
       encoding: 'application/json',
