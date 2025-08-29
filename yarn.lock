@@ -36,25 +36,35 @@
     uint8arrays "3.0.0"
     zod "^3.23.8"
 
-"@atproto/common@^0.4.2", "@atproto/common@^0.4.4":
-  version "0.4.4"
-  resolved "https://registry.yarnpkg.com/@atproto/common/-/common-0.4.4.tgz#79096aef920f5ad7cda5c682d7ed7416d0581e1a"
-  integrity sha512-58tMbn6A1Zu296s/l3uIj8z9d7IRHpZvLOfsFRikaQaYrzhJpL2aPY4uFQ8GJcxnsxeUnxBCrQz9we5jVVJI5Q==
+"@atproto/common-web@^0.4.0":
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/@atproto/common-web/-/common-web-0.4.0.tgz#b1407ae3f964f0ee23c2c3184f38041bac99d1f4"
+  integrity sha512-ZYL0P9myHybNgwh/hBY0HaBzqiLR1B5/ie5bJpLQAg0whRzNA28t8/nU2vh99tbsWcAF0LOD29M8++LyENJLNQ==
   dependencies:
-    "@atproto/common-web" "^0.3.1"
+    graphemer "^1.4.0"
+    multiformats "^9.9.0"
+    uint8arrays "3.0.0"
+    zod "^3.23.8"
+
+"@atproto/common@^0.4.4", "@atproto/common@^0.4.8":
+  version "0.4.8"
+  resolved "https://registry.yarnpkg.com/@atproto/common/-/common-0.4.8.tgz#4ca61807448c672f19d17443b569fcdb81cc6df7"
+  integrity sha512-/etCtnWQGLcfiGhIPwxAWrzgzoGB22nMWMeQcU6xZgRT4Cqrfg3A08jAMIHqve/AQpL+6D82lHYp36CG7a5G0w==
+  dependencies:
+    "@atproto/common-web" "^0.4.0"
     "@ipld/dag-cbor" "^7.0.3"
     cbor-x "^1.5.1"
     iso-datestring-validator "^2.2.2"
     multiformats "^9.9.0"
     pino "^8.21.0"
 
-"@atproto/crypto@^0.4.1":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@atproto/crypto/-/crypto-0.4.1.tgz#c9d3095258d198918cd25ba8b8bb27417f12e1bb"
-  integrity sha512-7pQNHWYyx8jGhYdPbmcuPD9W73nd/5v3mfBlncO0sBzxnPbmA6aXAWOz+fNVZwHwBJPeb/Gzf/FT/uDx7/eYFg==
+"@atproto/crypto@^0.4.1", "@atproto/crypto@^0.4.4":
+  version "0.4.4"
+  resolved "https://registry.yarnpkg.com/@atproto/crypto/-/crypto-0.4.4.tgz#3bd5066643d08e09da55bd59ac1f319d1fcff803"
+  integrity sha512-Yq9+crJ7WQl7sxStVpHgie5Z51R05etaK9DLWYG/7bR5T4bhdcIgF6IfklLShtZwLYdVVj+K15s0BqW9a8PSDA==
   dependencies:
-    "@noble/curves" "^1.1.0"
-    "@noble/hashes" "^1.3.1"
+    "@noble/curves" "^1.7.0"
+    "@noble/hashes" "^1.6.1"
     uint8arrays "3.0.0"
 
 "@atproto/identity@^0.4.1":
@@ -66,26 +76,26 @@
     "@atproto/crypto" "^0.4.1"
     axios "^0.27.2"
 
-"@atproto/lexicon@^0.4.1", "@atproto/lexicon@^0.4.2":
-  version "0.4.2"
-  resolved "https://registry.yarnpkg.com/@atproto/lexicon/-/lexicon-0.4.2.tgz#fcc92cdb82ae248b034b172763d6dbadfb00a829"
-  integrity sha512-CXoOkhcdF3XVUnR2oNgCs2ljWfo/8zUjxL5RIhJW/UNLp/FSl+KpF8Jm5fbk8Y/XXVPGRAsv9OYfxyU/14N/pw==
+"@atproto/lexicon@^0.4.1", "@atproto/lexicon@^0.4.2", "@atproto/lexicon@^0.4.7":
+  version "0.4.7"
+  resolved "https://registry.yarnpkg.com/@atproto/lexicon/-/lexicon-0.4.7.tgz#f5d31615c21bcfd3e655f1e4f11a40a62fea9f86"
+  integrity sha512-/x6h3tAiDNzSi4eXtC8ke65B7UzsagtlGRHmUD95698x5lBRpDnpizj0fZWTZVYed5qnOmz/ZEue+v3wDmO61g==
   dependencies:
-    "@atproto/common-web" "^0.3.1"
-    "@atproto/syntax" "^0.3.0"
+    "@atproto/common-web" "^0.4.0"
+    "@atproto/syntax" "^0.3.3"
     iso-datestring-validator "^2.2.2"
     multiformats "^9.9.0"
     zod "^3.23.8"
 
-"@atproto/repo@^0.5.0":
-  version "0.5.0"
-  resolved "https://registry.yarnpkg.com/@atproto/repo/-/repo-0.5.0.tgz#ab7aa44f279ca00b03cd28246d1b559a6cd0bff3"
-  integrity sha512-kZbj4wW5eFrDjkSTS9z+6bT4OTr5K4GrqWukWbfdBJtZPXsRDm75AV0C9ItoHDTdbBXn65TK6kqaJTrf89osCg==
+"@atproto/repo@^0.6.5":
+  version "0.6.5"
+  resolved "https://registry.yarnpkg.com/@atproto/repo/-/repo-0.6.5.tgz#a45cb0df5b1e0ec078a535a4acb69e9364938020"
+  integrity sha512-Sa95LaEMDtwL9M0kp3vuVQIcgEJI+6EssDLIiuPnJAi9SbEPESdUfEiIR5t2oFCkMwrS7OJQCLdCa7CMy+plUg==
   dependencies:
-    "@atproto/common" "^0.4.1"
-    "@atproto/common-web" "^0.3.0"
-    "@atproto/crypto" "^0.4.1"
-    "@atproto/lexicon" "^0.4.1"
+    "@atproto/common" "^0.4.8"
+    "@atproto/common-web" "^0.4.0"
+    "@atproto/crypto" "^0.4.4"
+    "@atproto/lexicon" "^0.4.7"
     "@ipld/car" "^3.2.3"
     "@ipld/dag-cbor" "^7.0.0"
     multiformats "^9.9.0"
@@ -96,6 +106,11 @@
   version "0.3.0"
   resolved "https://registry.yarnpkg.com/@atproto/syntax/-/syntax-0.3.0.tgz#fafa2dbea9add37253005cb663e7373e05e618b3"
   integrity sha512-Weq0ZBxffGHDXHl9U7BQc2BFJi/e23AL+k+i5+D9hUq/bzT4yjGsrCejkjq0xt82xXDjmhhvQSZ0LqxyZ5woxA==
+
+"@atproto/syntax@^0.3.3":
+  version "0.3.3"
+  resolved "https://registry.yarnpkg.com/@atproto/syntax/-/syntax-0.3.3.tgz#6debe8983985378104822172a128e429931bf3f7"
+  integrity sha512-F1LZweesNYdBbZBXVa72N/cSvchG8Q1tG4/209ZXbIuM3FwQtkgn+zgmmV4P4ORmhOeXPBNXvMBpcqiwx/gEQQ==
 
 "@atproto/xrpc-server@^0.7.1":
   version "0.7.1"
@@ -297,17 +312,17 @@
   dependencies:
     sparse-bitfield "^3.0.3"
 
-"@noble/curves@^1.1.0":
-  version "1.6.0"
-  resolved "https://registry.yarnpkg.com/@noble/curves/-/curves-1.6.0.tgz#be5296ebcd5a1730fccea4786d420f87abfeb40b"
-  integrity sha512-TlaHRXDehJuRNR9TfZDNQ45mMEd5dwUwmicsafcIX4SsNiqnCHKjE/1alYPd/lDRVhxdhUAlv8uEhMCI5zjIJQ==
+"@noble/curves@^1.7.0":
+  version "1.8.1"
+  resolved "https://registry.yarnpkg.com/@noble/curves/-/curves-1.8.1.tgz#19bc3970e205c99e4bdb1c64a4785706bce497ff"
+  integrity sha512-warwspo+UYUPep0Q+vtdVB4Ugn8GGQj8iyB3gnRWsztmUHTI3S1nhdiWNsPUGL0vud7JlRRk1XEu7Lq1KGTnMQ==
   dependencies:
-    "@noble/hashes" "1.5.0"
+    "@noble/hashes" "1.7.1"
 
-"@noble/hashes@1.5.0", "@noble/hashes@^1.3.1":
-  version "1.5.0"
-  resolved "https://registry.yarnpkg.com/@noble/hashes/-/hashes-1.5.0.tgz#abadc5ca20332db2b1b2aa3e496e9af1213570b0"
-  integrity sha512-1j6kQFb7QRru7eKN3ZDvRcP13rugwdxZqCjbiAVZfIJwgj2A65UmT4TgARXGlXgnRkORLTDTrO19ZErt7+QXgA==
+"@noble/hashes@1.7.1", "@noble/hashes@^1.6.1":
+  version "1.7.1"
+  resolved "https://registry.yarnpkg.com/@noble/hashes/-/hashes-1.7.1.tgz#5738f6d765710921e7a751e00c20ae091ed8db0f"
+  integrity sha512-B8XBPsn4vT/KJAGqDzbwztd+6Yte3P4V7iafm24bxgDe/mlRuK6xmWPuCNrKt2vDafZ8MfJLlchDG/vYafQEjQ==
 
 "@nodelib/fs.scandir@2.1.5":
   version "2.1.5"
