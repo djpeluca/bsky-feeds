@@ -14,6 +14,10 @@ export const getPostsForUser = async (
 
   const posts: Post[] = []
 
+  console.log(
+    `Getting posts for ${await resolveDIDToHandle(author, agent)}... `,
+  )
+
   let author_feed = await limit(() =>
     agent.api.app.bsky.feed.getAuthorFeed({
       actor: author,
