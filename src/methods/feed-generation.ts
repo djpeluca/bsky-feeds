@@ -20,25 +20,8 @@ export default function (server: Server, ctx: AppContext) {
       )
     }
 
-    // Get cache age from the manager class
-    const manager = algos[feedUri.rkey].manager
-    let cacheAge = 30 // Default cache age
-    
-    // Try to get cacheAge from the manager class (static method)
-    try {
-      if (manager && typeof manager === 'function' && (manager as any).cacheAge) {
-        // If manager is a class constructor
-        cacheAge = Number((manager as any).cacheAge(params))
-      } else if (manager && (manager as any).constructor && (manager as any).constructor.cacheAge) {
-        // If manager is an instance, try constructor
-        cacheAge = Number((manager as any).constructor.cacheAge(params))
-      }
-    } catch (error) {
-      // Use default cache age if there's an error
-      cacheAge = 30
-    }
-    
-    if (cacheAge > 0) {
+    const cacheAge = algos[feedUri.rkey].manager.cacheAge(params)
+    if (cacheAge.valueOf() > 0) {
       res.setHeader('Cache-Control', `public, max-age=${cacheAge}`)
     } else {
       res.setHeader('Cache-Control', `no-cache`)
