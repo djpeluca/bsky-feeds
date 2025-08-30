@@ -19,7 +19,8 @@
     "addSelfToList": "tsx scripts/addSelfToList.ts",
     "start": "node ./dist/index.js",
     "dev": "tsx ./src/index.ts",
-    "build": "tsc && tsc-alias"
+    "build": "tsc && tsc-alias",
+    "monitor": "tsx scripts/monitor.ts"
   },
   "dependencies": {
     "@atcute/client": "^2.0.6",

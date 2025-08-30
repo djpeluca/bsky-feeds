@@ -83,7 +83,8 @@ const INSTITUTION_PATTERNS = [
   /\bmauricio zunino\b/i,
 ];
 
-export class manager extends BaseFeedManager {
+// Change the class name from 'manager' to 'managerClass' to avoid naming conflict
+class managerClass extends BaseFeedManager {
   public name = shortname
   public author_collection = 'list_members'
   protected PATTERNS = [
@@ -137,6 +138,8 @@ export class manager extends BaseFeedManager {
     return parts.join(' ').toLowerCase()
   }
 }
+
+export const manager = new managerClass({} as any, {} as any);
 
 export const handler = async (ctx, params) => {
   const builder = await dbClient.getLatestPostsForTag({

@@ -413,6 +413,15 @@ class dbSingleton {
   async find(collection: string, filter: any, options?: any) {
     return this.client?.db().collection(collection).find(filter, options).toArray();
   }
+
+  async getRecentPosts(since: number) {
+    return this.client
+      ?.db()
+      .collection('post')
+      .find({ indexedAt: { $gt: since } })
+      .sort({ indexedAt: 1 })
+      .toArray() || [];
+  }
 }
 
 const dbClient = dbSingleton.getInstance()
