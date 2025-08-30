@@ -32,23 +32,9 @@ export class StreamSubscription {
     const handle = process.env.FEEDGEN_HANDLE
     const password = process.env.FEEDGEN_PASSWORD
 
-    // Initialize algo managers - handle both class and instance types
+    // Initialize algo managers
     Object.keys(algos).forEach((algo) => {
-      try {
-        const managerClass = algos[algo].manager
-        if (typeof managerClass === 'function') {
-          // If it's a class constructor, instantiate it
-          const manager = new managerClass(db, this.agent)
-          this.algoManagers.push(manager)
-        } else if (managerClass && typeof managerClass === 'object') {
-          // If it's already an instance, use it directly
-          this.algoManagers.push(managerClass)
-        } else {
-          console.warn(`[Subscription] Skipping invalid manager for ${algo}:`, managerClass)
-        }
-      } catch (error) {
-        console.error(`[Subscription] Error initializing manager for ${algo}:`, error)
-      }
+      this.algoManagers.push(new algos[algo].manager(db, this.agent))
     })
     
     console.log(`[Subscription] Initialized with ${this.algoManagers.length} algorithm managers`)
@@ -147,7 +133,7 @@ export class StreamSubscription {
           }
           
         } catch (error) {
-          console.error(`[Subscription] Error processing post:`, error)
+          console.error(`[Subscription] Error processing post ${event.commit.uri}:`, error)
           this.consecutiveErrors++
           
           if (this.consecutiveErrors >= 5) {
