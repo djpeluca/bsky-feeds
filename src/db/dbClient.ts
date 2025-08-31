@@ -201,9 +201,7 @@ class dbSingleton {
     nsfwOnly?: boolean
     excludeNSFW?: boolean
     sortOrder?: SortDirection
-  }) {
-    console.log(`DB: Getting latest posts for tag ${tag}, limit: ${limit}, cursor: ${cursor}`);
-    
+  }) {    
     let query: { indexedAt?: any; cid?: any; algoTags: string; $and?: any[] } = {
       algoTags: tag,
     };
