@@ -5,6 +5,7 @@ import crypto from 'crypto'
 import dotenv from 'dotenv'
 import algos from './algos'
 import batchUpdate from './addn/batchUpdate'
+import { getRateLimitStats } from './addn/rateLimit'
 
 export class StreamSubscription {
   private db: Database
@@ -192,8 +193,12 @@ export class StreamSubscription {
     const now = Date.now()
     const timeSinceLastPost = now - this.lastPostTime
     
+    // Get rate limiting statistics
+    const rateLimitStats = getRateLimitStats()
+    
     // Monitor for potential rate limiting or connection issues
     console.log(`[Subscription] HEALTH: ${this.postCount} posts, last post: ${Math.round(timeSinceLastPost / 1000)}s ago, errors: ${this.consecutiveErrors}`)
+    console.log(`[Subscription] RATE LIMIT: ${rateLimitStats.successRate} success rate, ${rateLimitStats.circuitBreakerStatus} circuit breaker, ${rateLimitStats.circuitBreakerTrips} trips`)
     
     // Alert if no posts received for extended period (possible rate limiting)
     if (timeSinceLastPost > 5 * 60 * 1000) {
@@ -203,6 +208,16 @@ export class StreamSubscription {
     // Alert if we have many consecutive errors (likely rate limiting)
     if (this.consecutiveErrors >= 10) {
       console.error(`[Subscription] CRITICAL: ${this.consecutiveErrors} consecutive errors - system may be rate limited`)
+    }
+    
+    // Alert if circuit breaker is open
+    if (rateLimitStats.circuitBreakerStatus === 'OPEN') {
+      console.warn(`[Subscription] WARNING: Circuit breaker is OPEN - system is backing off due to rate limiting`)
+    }
+    
+    // Alert if success rate is low
+    if (rateLimitStats.successRate !== '0%' && parseFloat(rateLimitStats.successRate) < 80) {
+      console.warn(`[Subscription] WARNING: Low API success rate: ${rateLimitStats.successRate} - may indicate rate limiting`)
     }
     
     this.lastHealthCheck = now
