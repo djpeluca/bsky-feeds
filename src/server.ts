@@ -9,7 +9,6 @@ import dbClient from './db/dbClient'
 import { StreamSubscription } from './subscription'
 import { AppContext, Config } from './config'
 import wellKnown from './well-known'
-import landingPage from './landing'
 
 export class FeedGenerator {
   public app: express.Application
@@ -55,7 +54,6 @@ export class FeedGenerator {
     describeGenerator(server, ctx)
     app.use(server.xrpc.router)
     app.use(wellKnown(ctx))
-    app.use('/dashboard', landingPage)
 
     return new FeedGenerator(app, jetstream, cfg)
   }
