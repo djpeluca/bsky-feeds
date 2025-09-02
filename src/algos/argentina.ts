@@ -18,6 +18,7 @@ dotenv.config()
 export const shortname = 'argentina'
 
 const MAIN_PATTERNS = [
+  // Modified to match only the Argentina flag emoji (🇦🇷) when it's not preceded by Ukrainian or Russian flags
   /(^|[\s\W])🇦🇷($|[\W\s])/im,
   /(^|[\s\W])Argenti($|[\W\s])/im,
   /(^|[\s\W])Argento($|[\W\s])/im,
@@ -94,6 +95,27 @@ export class manager extends BaseFeedManager {
     if (this.patternCache.has(cacheKey)) {
       return this.patternCache.get(cacheKey)!
     }
+    
+    // Check for Ukrainian and Russian flag combinations that might be mistaken for Argentina flag
+    // This handles cases where 🇺🇦 (Ukrainian flag) and 🇷🇺 (Russian flag) appear together or near 🇦🇷
+    if (matchString.includes('🇦🇷')) {
+      // If the post contains both Ukrainian and Russian flags, it might be a false positive
+      if (matchString.includes('🇺🇦') && matchString.includes('🇷🇺')) {
+        // Check if the flags are close to each other (within 10 characters)
+        const ukrainianIndex = matchString.indexOf('🇺🇦');
+        const russianIndex = matchString.indexOf('🇷🇺');
+        const argentinaIndex = matchString.indexOf('🇦🇷');
+        
+        if (Math.abs(ukrainianIndex - russianIndex) < 10 && 
+            (Math.abs(ukrainianIndex - argentinaIndex) < 10 || 
+             Math.abs(russianIndex - argentinaIndex) < 10)) {
+          // This is likely a false positive with flag combinations
+          this.patternCache.set(cacheKey, false);
+          return false;
+        }
+      }
+    }
+    
     // Grouped pattern matching for early exit
     const groups = [
       MAIN_PATTERNS,

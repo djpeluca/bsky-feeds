@@ -33,8 +33,8 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
 
 // Main AI patterns
 const MAIN_PATTERNS = [
-  /\bAI\b/g, // Only "AI"
-  /\bIA\b/g, // Only "IA"
+  /(^|[\s\W])AI($|[\W\s])/im, // Only "AI" as a standalone word
+  /(^|[\s\W])IA($|[\W\s])/im, // Only "IA" as a standalone word
   /(^|[\s\W])#ArtificialIntelligence($|[\W\s])/im,
   /(^|[\s\W])#GenerativeAI($|[\W\s])/im,
   /(^|[\s\W])#GenAI($|[\W\s])/im,
@@ -56,6 +56,7 @@ const MAIN_PATTERNS = [
 
 // AI Models and Technologies
 const MODEL_PATTERNS = [
+  /(^|[\s\W])GPT-5($|[\W\s])/im,
   /(^|[\s\W])GPT-4($|[\W\s])/im,
   /(^|[\s\W])GPT($|[\W\s])/im,
   /(^|[\s\W])GPT-4o($|[\W\s])/im,
@@ -152,14 +153,11 @@ const CONCEPT_PATTERNS = [
   /(^|[\s\W])Multi-modal($|[\W\s])/im,
   /(^|[\s\W])AGI($|[\W\s])/im,
   /(^|[\s\W])Artificial General Intelligence($|[\W\s])/im,
-  /(^|[\s\W])Alignment($|[\W\s])/im,
   /(^|[\s\W])AI Alignment($|[\W\s])/im,
   /(^|[\s\W])Hallucination($|[\W\s])/im,
   /(^|[\s\W])AI Hallucination($|[\W\s])/im,
-  /(^|[\s\W])Bias($|[\W\s])/im,
   /(^|[\s\W])AI Bias($|[\W\s])/im,
   /(^|[\s\W])AI Ethics($|[\W\s])/im,
-  /(^|[\s\W])Safety($|[\W\s])/im,
   /(^|[\s\W])AI Safety($|[\W\s])/im,
   /(^|[\s\W])Vector Database($|[\W\s])/im,
   /(^|[\s\W])langchain($|[\W\s])/im,
@@ -215,7 +213,6 @@ const APPLICATION_PATTERNS = [
   /(^|[\s\W])Sentiment Analysis($|[\W\s])/im,
   /(^|[\s\W])Recommendation System($|[\W\s])/im,
   /(^|[\s\W])Recommendation Systems($|[\W\s])/im,
-  /(^|[\s\W])Fraud Detection($|[\W\s])/im,
   /(^|[\s\W])Predictive Analytics($|[\W\s])/im,
   /(^|[\s\W])Autonomous Vehicle($|[\W\s])/im,
   /(^|[\s\W])Autonomous Vehicles($|[\W\s])/im,
@@ -280,4 +277,4 @@ export class manager extends BaseFeedManager {
     }
     return parts.join(' ').toLowerCase()
   }
-} 
+}
