@@ -3,7 +3,6 @@ import { AlgoManager } from '../addn/algoManager'
 import { safeAddToSet } from '../util/safeAddToSet'
 import dbClient from '../db/dbClient'
 import getListMembers from '../addn/getListMembers'
-import CentralizedPostManager from '../addn/centralizedPostManager'
 import dotenv from 'dotenv'
 
 export abstract class BaseFeedManager extends AlgoManager {
@@ -21,11 +20,9 @@ export abstract class BaseFeedManager extends AlgoManager {
   protected readonly CACHE_SIZE_LIMIT = 10000
   protected listCache: Map<string, { members: string[], timestamp: number }> = new Map()
   protected readonly LIST_CACHE_DURATION = 1000 * 60 * 5
-  protected centralizedPostManager: CentralizedPostManager
 
   constructor(db: any, agent: any) {
     super(db, agent)
-    this.centralizedPostManager = new CentralizedPostManager(agent)
   }
 
   public async start() {
@@ -142,7 +139,7 @@ export abstract class BaseFeedManager extends AlgoManager {
   }
 
   protected async processNewAuthors(new_authors: string[]) {
-    console.log(`[${this.name}] Processing ${new_authors.length} new authors using centralized post manager`)
+    console.log(`[${this.name}] Processing ${new_authors.length} new authors`)
     
     const BATCH_SIZE = parseInt(process.env.FEED_BATCH_SIZE || '50', 10)
     const batches: string[][] = []
@@ -151,22 +148,9 @@ export abstract class BaseFeedManager extends AlgoManager {
     }
     
     for (const batch of batches) {
-      const batchPromises = batch.map(async (author) => {
-        try {
-          // Use centralized post manager instead of individual API calls
-          const posts = await this.centralizedPostManager.getPostsForUser(author)
-          const validPosts = await this.filterPostsBatch(posts)
-          return { author, posts: validPosts }
-        } catch (error) {
-          console.error(`[${this.name}] Error processing author ${author}:`, error)
-          return { author, posts: [] }
-        }
-      })
-      
-      const batchResults = await Promise.all(batchPromises)
       const authorBulkOps: any[] = []
       
-      batchResults.forEach(({ author }) => {
+      batch.forEach((author) => {
         authorBulkOps.push({
           updateOne: {
             filter: { did: author },
@@ -183,20 +167,10 @@ export abstract class BaseFeedManager extends AlgoManager {
           console.error(`[${this.name}] Error updating authors in ${this.author_collection}:`, error)
         }
       }
-      
-      const allValidPosts = batchResults.flatMap(({ posts }) => posts)
-      if (allValidPosts.length > 0) {
-        try {
-          await safeAddToSet(this.db, allValidPosts, this.name)
-        } catch (err) {
-          console.error(`[${this.name}] Error in safeAddToSet for posts:`, err)
-        }
-      }
     }
     
-    // Log cache statistics
-    const cacheStats = this.centralizedPostManager.getCacheStats()
-    console.log(`[${this.name}] Cache stats: ${cacheStats.userCount} users, ${cacheStats.totalPosts} posts, ${cacheStats.cacheAgeMinutes}min old`)
+    console.log(`[${this.name}] Added ${new_authors.length} new authors to tracking list`)
+    console.log(`[${this.name}] Posts will be added from firehose subscription as they are created`)
   }
 
   protected async filterPostsBatch(posts: any[]): Promise<any[]> {

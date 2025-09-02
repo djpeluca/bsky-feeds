@@ -6,14 +6,12 @@ import dotenv from 'dotenv'
 import algos from './algos'
 import batchUpdate from './addn/batchUpdate'
 import { getRateLimitStats } from './addn/rateLimit'
-import CentralizedPostManager from './addn/centralizedPostManager'
 
 export class StreamSubscription {
   private db: Database
   private jetstream: Jetstream
   public algoManagers: any[]
   private agent: BskyAgent
-  private centralizedPostManager: CentralizedPostManager
   
   // Monitoring properties for rate limiting detection
   private lastPostTime = Date.now()
@@ -26,7 +24,6 @@ export class StreamSubscription {
     this.db = db
     this.algoManagers = []
     this.agent = new BskyAgent({ service: 'https://api.bsky.app' })
-    this.centralizedPostManager = new CentralizedPostManager(this.agent)
     
     this.jetstream = new Jetstream({
       wantedCollections: ["app.bsky.feed.post"], // Only need posts for feed generation
@@ -78,14 +75,8 @@ export class StreamSubscription {
       })
       await Promise.all(startPromises)
 
-      // Pre-fetch posts for all users to populate cache and reduce API calls
-      console.log(`[Subscription] Starting centralized post pre-fetch...`)
-      try {
-        await this.centralizedPostManager.preFetchAllUsers()
-        console.log(`[Subscription] Centralized post pre-fetch completed`)
-      } catch (error) {
-        console.warn(`[Subscription] Centralized post pre-fetch failed, continuing with real-time only:`, error)
-      }
+      // No longer pre-fetching posts - all posts will come from firehose
+      console.log(`[Subscription] Using firehose subscription for all posts`)
 
       // Handle new posts from Bluesky real-time feed
       this.jetstream.onCreate("app.bsky.feed.post", async (event) => {
@@ -208,13 +199,9 @@ export class StreamSubscription {
     // Get rate limiting statistics
     const rateLimitStats = getRateLimitStats()
     
-    // Get centralized post manager statistics
-    const postManagerStats = this.centralizedPostManager.getCacheStats()
-    
     // Monitor for potential rate limiting or connection issues
     console.log(`[Subscription] HEALTH: ${this.postCount} posts, last post: ${Math.round(timeSinceLastPost / 1000)}s ago, errors: ${this.consecutiveErrors}`)
     console.log(`[Subscription] RATE LIMIT: ${rateLimitStats.successRate} success rate, ${rateLimitStats.circuitBreakerStatus} circuit breaker, ${rateLimitStats.circuitBreakerTrips} trips`)
-    console.log(`[Subscription] POST MANAGER: ${postManagerStats.userCount} users cached, ${postManagerStats.totalPosts} posts, ${postManagerStats.cacheAgeMinutes}min old`)
     
     // Alert if no posts received for extended period (possible rate limiting)
     if (timeSinceLastPost > 5 * 60 * 1000) {
@@ -236,10 +223,7 @@ export class StreamSubscription {
       console.warn(`[Subscription] WARNING: Low API success rate: ${rateLimitStats.successRate} - may indicate rate limiting`)
     }
     
-    // Alert if post cache is getting stale
-    if (postManagerStats.cacheAgeMinutes > 60) {
-      console.warn(`[Subscription] WARNING: Post cache is ${postManagerStats.cacheAgeMinutes} minutes old - consider refreshing`)
-    }
+    // No longer need to check post cache age as we're using firehose
     
     this.lastHealthCheck = now
   }
