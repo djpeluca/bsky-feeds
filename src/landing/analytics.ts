@@ -10,29 +10,33 @@ export interface FeedAnalytics {
   uniqueAuthorsTrend: number;
   avgPostsPerDayTrend: number;
   timeDistribution: { hour: number; count: number }[];
-  weeklyQuantity: { week: string; count: number }[];
+  weeklyQuantity: {
+    week: string; // human-readable date range
+    count: number;
+    trendingTopics: string[];
+    topAuthor: { did: string; count: number } | null;
+    topPost: {
+      uri: string;
+      text: string;
+      likes?: number;
+      reposts?: number;
+      replies?: number;
+    } | null;
+  }[];
 }
 
 export async function getFeedAnalytics(feedId: string, period: string = 'week'): Promise<FeedAnalytics> {
   const db = dbClient.client?.db();
   if (!db) throw new Error('Database client not initialized');
 
-  // Validate feed exists
   if (!algos[feedId]) {
     throw new Error(`Feed ${feedId} not found`);
   }
 
-  // Calculate date ranges
   const now = new Date();
   const periodStart = getPeriodStartDate(now, period);
   const previousPeriodStart = getPeriodStartDate(periodStart, period);
 
-  // Debug logging
-  console.log('Fetching analytics for feed:', feedId);
-  console.log('Period:', periodStart, 'to', now);
-  console.log('Previous period:', previousPeriodStart, 'to', periodStart);
-
-  // Query counts
   const postCount = await getPostCountForFeed(db, feedId, periodStart, now);
   const previousPostCount = await getPostCountForFeed(db, feedId, previousPeriodStart, periodStart);
 
@@ -102,28 +106,23 @@ function getWeeksAgo(date: Date, weeks: number): Date {
   return result;
 }
 
-/**
- * Get a list of all available feeds with their names
- */
 export function getAvailableFeeds() {
   if (!algos) return [];
-  
   return Object.keys(algos).map(id => ({
     id,
-    name: algos[id]?.handler?.name || id
+    name: algos[id]?.handler?.name || id,
   }));
 }
 
-// --- Database query fixes ---
+// --- Database query helpers ---
 
 async function getPostCountForFeed(db: any, feedId: string, startDate: Date, endDate: Date): Promise<number> {
   try {
     const collection = db.collection('post');
-    const count = await collection.countDocuments({
+    return await collection.countDocuments({
       algoTags: feedId,
       indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() },
     });
-    return count;
   } catch (error) {
     console.error(`Error getting post count for feed ${feedId}:`, error);
     return 0;
@@ -152,13 +151,15 @@ async function getTimeDistribution(
 ): Promise<{ hour: number; count: number }[]> {
   try {
     const collection = db.collection('post');
-    const result = await collection.aggregate([
-      { $match: { algoTags: feedId, indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() } } },
-      { $addFields: { hour: { $hour: { $toDate: "$indexedAt" } } } }, // convert number -> Date
-      { $group: { _id: "$hour", count: { $sum: 1 } } },
-      { $project: { _id: 0, hour: "$_id", count: 1 } },
-      { $sort: { hour: 1 } },
-    ]).toArray();
+    const result = await collection
+      .aggregate([
+        { $match: { algoTags: feedId, indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() } } },
+        { $addFields: { hour: { $hour: { $toDate: '$indexedAt' } } } },
+        { $group: { _id: '$hour', count: { $sum: 1 } } },
+        { $project: { _id: 0, hour: '$_id', count: 1 } },
+        { $sort: { hour: 1 } },
+      ])
+      .toArray();
 
     return Array.from({ length: 24 }, (_, hour) => {
       const found = result.find(item => item.hour === hour);
@@ -175,21 +176,87 @@ async function getWeeklyQuantity(
   feedId: string,
   startDate: Date,
   endDate: Date
-): Promise<{ week: string; count: number }[]> {
+): Promise<
+  {
+    week: string;
+    count: number;
+    trendingTopics: string[];
+    topAuthor: { did: string; count: number } | null;
+    topPost: { uri: string; text: string; likes?: number; reposts?: number; replies?: number } | null;
+  }[]
+> {
   try {
     const collection = db.collection('post');
-    const result = await collection.aggregate([
-      { $match: { algoTags: feedId, indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() } } },
-      {
-        $addFields: {
-          week: { $dateToString: { format: "%Y-%U", date: { $toDate: "$indexedAt" } } }
+    const posts = await collection
+      .find({
+        algoTags: feedId,
+        indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() },
+      })
+      .toArray();
+
+    const weeks: Record<
+      string,
+      { posts: any[] }
+    > = {};
+
+    for (const post of posts) {
+      const date = new Date(post.indexedAt);
+      const weekStart = new Date(date);
+      weekStart.setDate(date.getDate() - date.getDay());
+      weekStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+
+      const weekKey = `${weekStart.toISOString().split('T')[0]} to ${weekEnd.toISOString().split('T')[0]}`;
+
+      if (!weeks[weekKey]) {
+        weeks[weekKey] = { posts: [] };
+      }
+      weeks[weekKey].posts.push(post);
+    }
+
+    return Object.entries(weeks).map(([week, { posts }]) => {
+      // Trending topics
+      const topicCounts: Record<string, number> = {};
+      for (const p of posts) {
+        const tags = (p.text?.match(/#\w+/g) || []) as string[];
+        for (const tag of tags) {
+          topicCounts[tag] = (topicCounts[tag] || 0) + 1;
         }
-      },
-      { $group: { _id: "$week", count: { $sum: 1 } } },
-      { $project: { _id: 0, week: "$_id", count: 1 } },
-      { $sort: { week: 1 } },
-    ]).toArray();
-    return result;
+      }
+      const trendingTopics = Object.entries(topicCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([tag]) => tag);
+
+      // Top author
+      const authorCounts: Record<string, number> = {};
+      for (const p of posts) {
+        authorCounts[p.author] = (authorCounts[p.author] || 0) + 1;
+      }
+      const topAuthorEntry = Object.entries(authorCounts).sort((a, b) => b[1] - a[1])[0];
+      const topAuthor = topAuthorEntry ? { did: topAuthorEntry[0], count: topAuthorEntry[1] } : null;
+
+      // Top post
+      const topPost =
+        posts
+          .map(p => ({
+            uri: p.uri,
+            text: p.text,
+            likes: p.likes || 0,
+            reposts: p.reposts || 0,
+            replies: p.replies || 0,
+          }))
+          .sort((a, b) => b.likes + b.reposts + b.replies - (a.likes + a.reposts + a.replies))[0] || null;
+
+      return {
+        week,
+        count: posts.length,
+        trendingTopics,
+        topAuthor,
+        topPost,
+      };
+    });
   } catch (error) {
     console.error(`Error getting weekly quantity for feed ${feedId}:`, error);
     return [];
