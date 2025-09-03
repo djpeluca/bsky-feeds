@@ -1,15 +1,21 @@
 import express from 'express';
 import path from 'path';
+import { fileURLToPath } from 'url'; // <-- add this
+import { dirname, join } from 'path';
 import { AppContext } from '../config';
 import dbClient from '../db/dbClient';
 import algos from '../algos';
 import { getFeedAnalytics, getAvailableFeeds, FeedAnalytics } from './analytics';
 
+// Fix __dirname for ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 export const createLandingPageRouter = (ctx: AppContext) => {
   const router = express.Router();
 
   // Serve static files from 'public'
-  router.use('/static', express.static(path.join(__dirname, 'public')));
+  router.use('/static', express.static(join(__dirname, 'public')));
 
   // API endpoints
   router.get('/api/feeds', (req, res) => {
