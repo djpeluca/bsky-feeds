@@ -1,11 +1,9 @@
 import express from 'express';
-import path from 'path';
-import { fileURLToPath } from 'url'; // <-- add this
+import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { AppContext } from '../config';
-import dbClient from '../db/dbClient';
 import algos from '../algos';
-import { getFeedAnalytics, getAvailableFeeds, FeedAnalytics } from './analytics';
+import { getFeedAnalytics, getAvailableFeeds } from './analytics';
 
 // Fix __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -45,7 +43,7 @@ export const createLandingPageRouter = (ctx: AppContext) => {
     }
   });
 
-  // Serve landing page for '/' and '/dashboard'
+  // Landing page routes
   router.get(['/', '/dashboard'], async (req, res) => {
     try {
       const feedAlgos = Object.keys(algos).map(key => ({
@@ -60,7 +58,7 @@ export const createLandingPageRouter = (ctx: AppContext) => {
     }
   });
 
-  // Optional: catch-all for SPA-style routing (must come last)
+  // SPA catch-all (optional)
   router.get('*', (req, res) => {
     const feedAlgos = Object.keys(algos).map(key => ({
       name: key,
@@ -72,7 +70,7 @@ export const createLandingPageRouter = (ctx: AppContext) => {
   return router;
 };
 
-// Paste your existing generateLandingPageHTML function here
+// Generate landing page HTML
 function generateLandingPageHTML(feeds: { name: string; displayName: string }[]) {
   return `
     <!DOCTYPE html>
@@ -81,9 +79,7 @@ function generateLandingPageHTML(feeds: { name: string; displayName: string }[])
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Bsky Feeds Analytics Dashboard</title>
-      <style>
-        /* your CSS here */
-      </style>
+      <link rel="stylesheet" href="/static/styles.css">
       <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </head>
     <body>
@@ -93,16 +89,16 @@ function generateLandingPageHTML(feeds: { name: string; displayName: string }[])
           ${feeds
             .map(
               feed => `
-            <div class="card" id="${feed.name}-card">
-              <h2>${feed.displayName}</h2>
-              <div class="stats" id="${feed.name}-stats">
-                <div class="loading">Loading analytics...</div>
+              <div class="card" id="${feed.name}-card">
+                <h2>${feed.displayName}</h2>
+                <div class="stats" id="${feed.name}-stats">
+                  <div class="loading">Loading analytics...</div>
+                </div>
+                <div class="chart-container">
+                  <canvas id="${feed.name}-chart"></canvas>
+                </div>
               </div>
-              <div class="chart-container">
-                <canvas id="${feed.name}-chart"></canvas>
-              </div>
-            </div>
-          `
+            `
             )
             .join('')}
         </div>
@@ -125,21 +121,21 @@ function generateLandingPageHTML(feeds: { name: string; displayName: string }[])
             statsElement.innerHTML = '<div class="error">Failed to load analytics</div>';
             return;
           }
+
           statsElement.innerHTML = \`
-            <div class="stat-item"><span>Total Posts:</span><strong>\${data.totalPosts}</strong></div>
-            <div class="stat-item"><span>Posts This Week:</span><strong>\${data.postsThisWeek}</strong></div>
-            <div class="stat-item"><span>Average Posts Per Day:</span><strong>\${data.avgPostsPerDay.toFixed(2)}</strong></div>
-            <div class="stat-item"><span>Active Authors:</span><strong>\${data.activeAuthors}</strong></div>
+            <div class="stat-item"><span>Total Posts:</span><strong>\${data.postCount}</strong></div>
+            <div class="stat-item"><span>Unique Authors:</span><strong>\${data.uniqueAuthors}</strong></div>
+            <div class="stat-item"><span>Avg Posts/Day:</span><strong>\${data.avgPostsPerDay.toFixed(2)}</strong></div>
           \`;
 
           const ctx = document.getElementById(\`\${feedId}-chart\`).getContext('2d');
           new Chart(ctx, {
             type: 'bar',
             data: {
-              labels: data.weeklyData.map(d => d.day),
+              labels: data.weeklyQuantity.map(d => d.week),
               datasets: [{
-                label: 'Posts per Day',
-                data: data.weeklyData.map(d => d.count),
+                label: 'Posts per Week',
+                data: data.weeklyQuantity.map(d => d.count),
                 backgroundColor: 'rgba(0, 102, 204, 0.7)',
                 borderColor: 'rgba(0, 102, 204, 1)',
                 borderWidth: 1
