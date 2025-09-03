@@ -9,6 +9,7 @@ import dbClient from './db/dbClient'
 import { StreamSubscription } from './subscription'
 import { AppContext, Config } from './config'
 import wellKnown from './well-known'
+import { createLandingPageRouter } from './landing/index'
 
 export class FeedGenerator {
   public app: express.Application
@@ -50,13 +51,23 @@ export class FeedGenerator {
       didResolver,
       cfg,
     }
+
+    // Mount landing page router BEFORE API routers
+    const landingRouter = createLandingPageRouter(ctx)
+    app.use('/', landingRouter) // now '/' and '/dashboard' will work
+
+    // Mount your feed generation methods
     feedGeneration(server, ctx)
     describeGenerator(server, ctx)
+
+    // Mount the XRCP server routes
     app.use(server.xrpc.router)
+
+    // Mount well-known endpoints (like /.well-known)
     app.use(wellKnown(ctx))
 
     return new FeedGenerator(app, jetstream, cfg)
-  }
+}
 
   async start(): Promise<http.Server> {
     this.jetstream.start()
