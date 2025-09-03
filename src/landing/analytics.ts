@@ -104,13 +104,9 @@ function getWeeksAgo(date: Date, weeks: number): Date {
 
 /**
  * Get a list of all available feeds with their names
- * @returns Array of feed objects with id and name
  */
 export function getAvailableFeeds() {
-  // Make sure algos is defined before using it
-  if (!algos) {
-    return [];
-  }
+  if (!algos) return [];
   
   return Object.keys(algos).map(id => ({
     id,
@@ -124,8 +120,8 @@ async function getPostCountForFeed(db: any, feedId: string, startDate: Date, end
   try {
     const collection = db.collection('post');
     const count = await collection.countDocuments({
-      algoTags: feedId, // Make sure this matches the field in your documents
-      indexedAt: { $gte: startDate, $lte: endDate }, // Use Date objects, not strings
+      algoTags: feedId,
+      indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() },
     });
     return count;
   } catch (error) {
@@ -139,7 +135,7 @@ async function getUniqueAuthorsForFeed(db: any, feedId: string, startDate: Date,
     const collection = db.collection('post');
     const authors = await collection.distinct('author', {
       algoTags: feedId,
-      indexedAt: { $gte: startDate, $lte: endDate },
+      indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() },
     });
     return authors.length;
   } catch (error) {
@@ -148,12 +144,17 @@ async function getUniqueAuthorsForFeed(db: any, feedId: string, startDate: Date,
   }
 }
 
-async function getTimeDistribution(db: any, feedId: string, startDate: Date, endDate: Date): Promise<{ hour: number; count: number }[]> {
+async function getTimeDistribution(
+  db: any,
+  feedId: string,
+  startDate: Date,
+  endDate: Date
+): Promise<{ hour: number; count: number }[]> {
   try {
     const collection = db.collection('post');
     const result = await collection.aggregate([
-      { $match: { algoTags: feedId, indexedAt: { $gte: startDate, $lte: endDate } } },
-      { $addFields: { hour: { $hour: "$indexedAt" } } },
+      { $match: { algoTags: feedId, indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() } } },
+      { $addFields: { hour: { $hour: { $toDate: "$indexedAt" } } } }, // convert number -> Date
       { $group: { _id: "$hour", count: { $sum: 1 } } },
       { $project: { _id: 0, hour: "$_id", count: 1 } },
       { $sort: { hour: 1 } },
@@ -169,14 +170,19 @@ async function getTimeDistribution(db: any, feedId: string, startDate: Date, end
   }
 }
 
-async function getWeeklyQuantity(db: any, feedId: string, startDate: Date, endDate: Date): Promise<{ week: string; count: number }[]> {
+async function getWeeklyQuantity(
+  db: any,
+  feedId: string,
+  startDate: Date,
+  endDate: Date
+): Promise<{ week: string; count: number }[]> {
   try {
     const collection = db.collection('post');
     const result = await collection.aggregate([
-      { $match: { algoTags: feedId, indexedAt: { $gte: startDate, $lte: endDate } } },
+      { $match: { algoTags: feedId, indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() } } },
       {
         $addFields: {
-          week: { $dateToString: { format: "%Y-%U", date: "$indexedAt" } }
+          week: { $dateToString: { format: "%Y-%U", date: { $toDate: "$indexedAt" } } }
         }
       },
       { $group: { _id: "$week", count: { $sum: 1 } } },
