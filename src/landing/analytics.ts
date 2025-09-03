@@ -9,26 +9,20 @@ export interface FeedAnalytics {
   postCountTrend: number;
   uniqueAuthorsTrend: number;
   avgPostsPerDayTrend: number;
-  timeDistribution?: { hour: number; count: number }[];
-  weeklyQuantity?: { week: string; count: number }[];
+  timeDistribution: { hour: number; count: number }[];
+  weeklyQuantity: { week: string; count: number }[];
 }
 
 export async function getFeedAnalytics(feedId: string, period: string = 'week'): Promise<FeedAnalytics> {
   const db = dbClient.client?.db();
   if (!db) throw new Error('Database client not initialized');
 
-  // Validate feed exists
-  if (!algos[feedId]) {
-    throw new Error(`Feed ${feedId} not found`);
-  }
+  if (!algos[feedId]) throw new Error(`Feed ${feedId} not found`);
 
   const now = new Date();
   const periodStart = getPeriodStartDate(now, period);
   const previousPeriodStart = getPeriodStartDate(periodStart, period);
 
-  console.log('Fetching analytics for feed:', feedId);
-
-  // Query counts
   const postCount = await getPostCountForFeed(db, feedId, periodStart, now);
   const previousPostCount = await getPostCountForFeed(db, feedId, previousPeriodStart, periodStart);
 
@@ -45,12 +39,9 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   const uniqueAuthorsTrend = calculateTrend(uniqueAuthors, previousUniqueAuthors);
   const avgPostsPerDayTrend = calculateTrend(avgPostsPerDay, previousAvgPostsPerDay);
 
-  // Skip heavy queries for slow feeds
-  let timeDistribution, weeklyQuantity;
-  if (feedId !== 'brasil') {
-    timeDistribution = await getTimeDistribution(db, feedId, periodStart, now);
-    weeklyQuantity = await getWeeklyQuantity(db, feedId, getWeeksAgo(now, 12), now);
-  }
+  // Include all aggregations, even for "brasil"
+  const timeDistribution = await getTimeDistribution(db, feedId, periodStart, now);
+  const weeklyQuantity = await getWeeklyQuantity(db, feedId, getWeeksAgo(now, 12), now);
 
   return {
     feedId,
@@ -101,7 +92,6 @@ function getWeeksAgo(date: Date, weeks: number): Date {
   return result;
 }
 
-// --- Available feeds ---
 export function getAvailableFeeds() {
   if (!algos) return [];
   return Object.keys(algos).map(id => ({
