@@ -65,11 +65,18 @@ function generateLandingPageHTML(feeds: { name: string; displayName: string }[])
 <style>
 body { font-family: Arial; margin: 0; background: #f4f4f4; }
 header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
-.container { max-width: 1200px; margin: auto; padding: 1rem; }
+.container { max-width: 1400px; margin: auto; padding: 1rem; }
 .dashboard { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; }
-.card { background: white; padding: 1rem; border-radius: 8px; flex: 1 1 300px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-.chart-container { height: 200px; }
+.card { background: white; padding: 1rem; border-radius: 8px; flex: 1 1 450px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+.chart-container { height: 250px; }
 .stat-item { margin: 0.5rem 0; display: flex; justify-content: space-between; }
+.trend-up { color: green; }
+.trend-down { color: red; }
+.list { font-size: 0.9rem; margin: 0.5rem 0; }
+.list li { margin: 0.2rem 0; }
+.heatmap { display: grid; grid-template-columns: repeat(24, 1fr); gap: 1px; }
+.heatmap-cell { width: 100%; padding-top: 100%; position: relative; }
+.heatmap-cell div { position: absolute; top:0; left:0; right:0; bottom:0; text-align:center; font-size:0.6rem; }
 .loading { color: gray; }
 .error { color: red; }
 </style>
@@ -82,15 +89,21 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
       <div class="card" id="${feed.name}-card">
         <h2>${feed.displayName}</h2>
         <div class="stats" id="${feed.name}-stats"><div class="loading">Loading analytics...</div></div>
-        <div class="chart-container">
-          <canvas id="${feed.name}-chart"></canvas>
-        </div>
+        <div class="chart-container"><canvas id="${feed.name}-weeklyChart"></canvas></div>
+        <div class="chart-container"><canvas id="${feed.name}-mediaChart"></canvas></div>
+        <div class="chart-container"><canvas id="${feed.name}-repliesChart"></canvas></div>
+        <h3>Trending Tags</h3>
+        <ul class="list" id="${feed.name}-tags"></ul>
+        <h3>Top Authors</h3>
+        <ul class="list" id="${feed.name}-authors"></ul>
+        <h3>Activity Heatmap (Day × Hour)</h3>
+        <div class="heatmap" id="${feed.name}-heatmap"></div>
       </div>
     `).join('')}
   </div>
 </div>
 <script>
-async function fetchAnalytics(feedId, timeout=15000){
+async function fetchAnalytics(feedId, timeout=20000){
   const controller = new AbortController();
   const timer = setTimeout(()=>controller.abort(), timeout);
   try{
@@ -103,45 +116,80 @@ async function fetchAnalytics(feedId, timeout=15000){
   } finally { clearTimeout(timer); }
 }
 
+function renderTrend(val){
+  if(val > 0) return '<span class="trend-up">↑ '+val+'%</span>';
+  if(val < 0) return '<span class="trend-down">↓ '+Math.abs(val)+'%</span>';
+  return '<span>'+val+'%</span>';
+}
+
 function updateFeedCard(feedId, data){
   const stats = document.getElementById(\`\${feedId}-stats\`);
   if(!data){ stats.innerHTML='<div class="error">Failed to load analytics</div>'; return; }
+
   stats.innerHTML=\`
-    <div class="stat-item"><span>Total Posts:</span><strong>\${data.postCount}</strong></div>
-    <div class="stat-item"><span>Unique Authors:</span><strong>\${data.uniqueAuthors}</strong></div>
-    <div class="stat-item"><span>Average Posts Per Day:</span><strong>\${data.avgPostsPerDay.toFixed(2)}</strong></div>
+    <div class="stat-item"><span>Total Posts:</span><strong>\${data.postCount}</strong> \${renderTrend(data.postCountTrend)}</div>
+    <div class="stat-item"><span>Unique Authors:</span><strong>\${data.uniqueAuthors}</strong> \${renderTrend(data.uniqueAuthorsTrend)}</div>
+    <div class="stat-item"><span>Average Posts/Day:</span><strong>\${data.avgPostsPerDay.toFixed(2)}</strong> \${renderTrend(data.avgPostsPerDayTrend)}</div>
   \`;
+
+  // Weekly bar chart
   if(data.weeklyQuantity){
-    const ctx=document.getElementById(\`\${feedId}-chart\`).getContext('2d');
-    new Chart(ctx,{
-      type:'bar',
-      data:{ labels:data.weeklyQuantity.map(d=>d.week), datasets:[{label:'Posts per Week', data:data.weeklyQuantity.map(d=>d.count), backgroundColor:'rgba(0,102,204,0.7)', borderColor:'rgba(0,102,204,1)', borderWidth:1}]},
+    const ctx=document.getElementById(\`\${feedId}-weeklyChart\`).getContext('2d');
+    new Chart(ctx,{ type:'bar',
+      data:{ labels:data.weeklyQuantity.map(d=>d.week), 
+             datasets:[{label:'Posts per Week', data:data.weeklyQuantity.map(d=>d.count),
+                        backgroundColor:'rgba(0,102,204,0.7)', borderColor:'rgba(0,102,204,1)', borderWidth:1}]},
       options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } } }
     });
+  }
+
+  // Media vs Text pie chart
+  if(data.mediaVsText){
+    const ctx=document.getElementById(\`\${feedId}-mediaChart\`).getContext('2d');
+    new Chart(ctx,{ type:'pie',
+      data:{ labels:['Media','Text'], datasets:[{data:[data.mediaVsText.media, data.mediaVsText.text],
+        backgroundColor:['#ff9933','#3399ff']}] },
+      options:{ responsive:true, maintainAspectRatio:false }
+    });
+  }
+
+  // Replies vs Standalone pie chart
+  if(data.repliesVsStandalone){
+    const ctx=document.getElementById(\`\${feedId}-repliesChart\`).getContext('2d');
+    new Chart(ctx,{ type:'pie',
+      data:{ labels:['Replies','Standalone'], datasets:[{data:[data.repliesVsStandalone.replies, data.repliesVsStandalone.standalone],
+        backgroundColor:['#66cc66','#cc6666']}] },
+      options:{ responsive:true, maintainAspectRatio:false }
+    });
+  }
+
+  // Trending tags
+  const tagsEl=document.getElementById(\`\${feedId}-tags\`);
+  if(data.trendingTags){ tagsEl.innerHTML=data.trendingTags.map(t=>'<li>#'+t.tag+' ('+t.count+')</li>').join(''); }
+
+  // Top authors
+  const authorsEl=document.getElementById(\`\${feedId}-authors\`);
+  if(data.topAuthors){ authorsEl.innerHTML=data.topAuthors.map(a=>'<li>'+a.author+' ('+a.count+')</li>').join(''); }
+
+  // Heatmap
+  const heatmapEl=document.getElementById(\`\${feedId}-heatmap\`);
+  if(data.dowHourHeatmap){
+    const maxCount = Math.max(...data.dowHourHeatmap.map(c=>c.count));
+    heatmapEl.innerHTML=data.dowHourHeatmap.map(c=>{
+      const intensity = maxCount>0 ? Math.round((c.count/maxCount)*255) : 0;
+      const color = 'rgb('+intensity+',0,'+(255-intensity)+')';
+      return '<div class="heatmap-cell" style="background:'+color+'"><div>'+ (c.count>0?c.count:'') +'</div></div>';
+    }).join('');
   }
 }
 
 async function initDashboard(){
   const feeds=${JSON.stringify(feeds)};
-  const brasilIndex = feeds.findIndex(f => f.name === 'brasil');
-  const normalFeeds = feeds.filter(f => f.name !== 'brasil');
-
-  // Load normal feeds sequentially
-  for(const feed of normalFeeds){
+  for(const feed of feeds){
     const data=await fetchAnalytics(feed.name);
     updateFeedCard(feed.name, data);
   }
-
-  // Load brasil feed last, progressively
-  if(brasilIndex>=0){
-    const brasilFeed = feeds[brasilIndex];
-    const placeholderStats = document.getElementById(\`\${brasilFeed.name}-stats\`);
-    placeholderStats.innerHTML='<div class="loading">Loading brasil analytics (this may take a few seconds)...</div>';
-    const data = await fetchAnalytics(brasilFeed.name, 30000); // increase timeout
-    updateFeedCard(brasilFeed.name, data);
-  }
 }
-
 document.addEventListener('DOMContentLoaded', initDashboard);
 </script>
 </body>
