@@ -40,6 +40,7 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   const periodStart = getPeriodStartDate(now, period);
   const previousPeriodStart = getPeriodStartDate(periodStart, period);
 
+  // --- Base metrics ---
   const postCount = await getPostCountForFeed(db, feedId, periodStart, now);
   const previousPostCount = await getPostCountForFeed(db, feedId, previousPeriodStart, periodStart);
 
@@ -56,6 +57,7 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   const uniqueAuthorsTrend = calculateTrend(uniqueAuthors, previousUniqueAuthors);
   const avgPostsPerDayTrend = calculateTrend(avgPostsPerDay, previousAvgPostsPerDay);
 
+  // --- Time & weekly quantities ---
   const timeDistribution = await getTimeDistribution(db, feedId, periodStart, now);
   const weeklyQuantity = await getWeeklyQuantity(db, feedId, getWeeksAgo(now, 12), now);
 
@@ -220,7 +222,6 @@ async function getMediaVsText(db: any, feedId: string, startDate: Date, endDate:
       ],
     });
 
-    // text-only: no embed fields present/non-null
     const text = await db.collection('post').countDocuments({
       ...matchBase,
       'embed.images': null,
@@ -261,7 +262,7 @@ async function getRepliesVsStandalone(db: any, feedId: string, startDate: Date, 
 
 async function getTrendingTags(db: any, feedId: string, startDate: Date, endDate: Date) {
   try {
-    const result = await db
+    return await db
       .collection('post')
       .aggregate([
         {
@@ -278,8 +279,6 @@ async function getTrendingTags(db: any, feedId: string, startDate: Date, endDate
         { $project: { _id: 0, tag: '$_id', count: 1 } },
       ])
       .toArray();
-
-    return result;
   } catch (error) {
     console.error(`Error getting trending tags for feed ${feedId}:`, error);
     return [];
@@ -288,7 +287,7 @@ async function getTrendingTags(db: any, feedId: string, startDate: Date, endDate
 
 async function getTopAuthors(db: any, feedId: string, startDate: Date, endDate: Date) {
   try {
-    const result = await db
+    return await db
       .collection('post')
       .aggregate([
         { $match: { algoTags: feedId, indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() } } },
@@ -298,8 +297,6 @@ async function getTopAuthors(db: any, feedId: string, startDate: Date, endDate: 
         { $project: { _id: 0, author: '$_id', count: 1 } },
       ])
       .toArray();
-
-    return result;
   } catch (error) {
     console.error(`Error getting top authors for feed ${feedId}:`, error);
     return [];
@@ -323,11 +320,11 @@ async function getDowHourHeatmap(db: any, feedId: string, startDate: Date, endDa
       ])
       .toArray();
 
-    // Fill missing (dow, hour) combos with 0s for a full 7x24 heatmap
     const map = new Map<string, number>();
     for (const r of raw) {
       map.set(`${r.dow}-${r.hour}`, r.count);
     }
+
     const out: { dow: number; hour: number; count: number }[] = [];
     for (let d = 1; d <= 7; d++) {
       for (let h = 0; h < 24; h++) {
@@ -337,9 +334,12 @@ async function getDowHourHeatmap(db: any, feedId: string, startDate: Date, endDa
     return out;
   } catch (error) {
     console.error(`Error getting DOW×Hour heatmap for feed ${feedId}:`, error);
-    // Return empty 7x24 with zeros
     const out: { dow: number; hour: number; count: number }[] = [];
-    for (let d = 1; d <= 7; d++) for (let h = 0; h < 24; h++) out.push({ dow: d, hour: h, count: 0 });
+    for (let d = 1; d <= 7; d++) {
+      for (let h = 0; h < 24; h++) {
+        out.push({ dow: d, hour: h, count: 0 });
+      }
+    }
     return out;
   }
 }
