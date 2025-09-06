@@ -67,7 +67,11 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
 .dashboard { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; }
 .card { background: white; padding: 1rem; border-radius: 8px; flex: 1 1 450px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 .chart-container { height: 250px; }
-.stat-item { margin: 0.5rem 0; display: flex; justify-content: space-between; }
+
+.stat-item { display: flex; align-items: center; margin: 0.5rem 0; }
+.stat-label { flex: 1; text-align: left; }
+.stat-value { flex: 0; min-width: 70px; text-align: right; }
+.stat-trend { flex: 0; text-align: right; white-space: nowrap; margin-left: 0.5rem; }
 .trend-up { color: green; }
 .trend-down { color: red; }
 
@@ -125,9 +129,21 @@ function updateFeedCard(feedId, data){
   if(!data){ stats.innerHTML='<div class="error">Failed to load analytics</div>'; return; }
 
   stats.innerHTML=\`
-    <div class="stat-item"><span>Total Posts:</span><strong>\${data.postCount}</strong> \${renderTrend(data.postCountTrend)}</div>
-    <div class="stat-item"><span>Unique Authors:</span><strong>\${data.uniqueAuthors}</strong> \${renderTrend(data.uniqueAuthorsTrend)}</div>
-    <div class="stat-item"><span>Average Posts/Day:</span><strong>\${data.avgPostsPerDay.toFixed(2)}</strong> \${renderTrend(data.avgPostsPerDayTrend)}</div>
+    <div class="stat-item">
+      <span class="stat-label">Total Posts:</span>
+      <strong class="stat-value">\${data.postCount}</strong>
+      <span class="stat-trend">\${renderTrend(data.postCountTrend)}</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Unique Authors:</span>
+      <strong class="stat-value">\${data.uniqueAuthors}</strong>
+      <span class="stat-trend">\${renderTrend(data.uniqueAuthorsTrend)}</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Average Posts/Day:</span>
+      <strong class="stat-value">\${data.avgPostsPerDay.toFixed(2)}</strong>
+      <span class="stat-trend">\${renderTrend(data.avgPostsPerDayTrend)}</span>
+    </div>
   \`;
 
   // Weekly bar chart
