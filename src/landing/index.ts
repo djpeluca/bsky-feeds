@@ -68,8 +68,6 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
 .stat-item { margin: 0.5rem 0; display: flex; justify-content: space-between; }
 .trend-up { color: green; }
 .trend-down { color: red; }
-.list { font-size: 0.9rem; margin: 0.5rem 0; }
-.list li { margin: 0.2rem 0; }
 .heatmap { display: grid; grid-template-columns: repeat(24, 1fr); gap: 1px; }
 .heatmap-cell { width: 100%; padding-top: 100%; position: relative; }
 .heatmap-cell div { position: absolute; top:0; left:0; right:0; bottom:0; text-align:center; font-size:0.6rem; }
@@ -86,8 +84,6 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
         <h2>${feed.displayName}</h2>
         <div class="stats" id="${feed.name}-stats"><div class="loading">Loading analytics...</div></div>
         <div class="chart-container"><canvas id="${feed.name}-weeklyChart"></canvas></div>
-        <h3>Last Week Tags</h3>
-        <ul class="list" id="${feed.name}-tags"></ul>
         <h3>Activity Heatmap (Day × Hour)</h3>
         <div class="heatmap" id="${feed.name}-heatmap"></div>
       </div>
@@ -135,10 +131,6 @@ function updateFeedCard(feedId, data){
     });
   }
 
-  // Trending tags
-  const tagsEl=document.getElementById(\`\${feedId}-tags\`);
-  if(data.trendingTags){ tagsEl.innerHTML=data.trendingTags.map(t=>'<li>#'+t.tag+' ('+t.count+')</li>').join(''); }
-
   // Heatmap
   const heatmapEl=document.getElementById(\`\${feedId}-heatmap\`);
   if(data.dowHourHeatmap){
@@ -153,9 +145,10 @@ function updateFeedCard(feedId, data){
 
 async function initDashboard(){
   const feeds=${JSON.stringify(feeds)};
-  // Fetch all feed analytics in parallel for faster loading
-  const results = await Promise.all(feeds.map(feed => fetchAnalytics(feed.name)));
-  feeds.forEach((feed, idx) => updateFeedCard(feed.name, results[idx]));
+  // Fetch each feed individually to prevent blocking
+  for(const feed of feeds){
+    fetchAnalytics(feed.name).then(data => updateFeedCard(feed.name, data));
+  }
 }
 document.addEventListener('DOMContentLoaded', initDashboard);
 </script>
