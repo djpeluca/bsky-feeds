@@ -25,11 +25,7 @@ export const createLandingPageRouter = (ctx: AppContext) => {
   router.get('/api/analytics/:feedId', async (req, res) => {
     try {
       const feedId = req.params.feedId;
-      const period = (req.query.period as string) || 'week';
-
-      if (!algos[feedId]) return res.status(404).json({ error: 'Feed not found' });
-
-      const analytics = await getFeedAnalytics(feedId, period);
+      const analytics = await getFeedAnalytics(feedId);
       res.json(analytics);
     } catch (error) {
       console.error(`Error getting analytics for feed ${req.params.feedId}:`, error);
@@ -61,7 +57,7 @@ function generateLandingPageHTML(feeds: { name: string; displayName: string }[])
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bsky Feeds Analytics Dashboard</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
 <style>
 body { font-family: Arial; margin: 0; background: #f4f4f4; }
 header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
@@ -90,19 +86,15 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
         <h2>${feed.displayName}</h2>
         <div class="stats" id="${feed.name}-stats"><div class="loading">Loading analytics...</div></div>
         <div class="chart-container"><canvas id="${feed.name}-weeklyChart"></canvas></div>
-        <div class="chart-container"><canvas id="${feed.name}-mediaChart"></canvas></div>
-        <div class="chart-container"><canvas id="${feed.name}-repliesChart"></canvas></div>
-        <h3>Trending Tags</h3>
+        <h3>Last Week Tags</h3>
         <ul class="list" id="${feed.name}-tags"></ul>
-        <h3>Top Authors</h3>
-        <ul class="list" id="${feed.name}-authors"></ul>
         <h3>Activity Heatmap (Day × Hour)</h3>
         <div class="heatmap" id="${feed.name}-heatmap"></div>
       </div>
     `).join('')}
   </div>
 </div>
-<script>
+<script defer>
 async function fetchAnalytics(feedId, timeout=20000){
   const controller = new AbortController();
   const timer = setTimeout(()=>controller.abort(), timeout);
@@ -143,33 +135,9 @@ function updateFeedCard(feedId, data){
     });
   }
 
-  // Media vs Text pie chart
-  if(data.mediaVsText){
-    const ctx=document.getElementById(\`\${feedId}-mediaChart\`).getContext('2d');
-    new Chart(ctx,{ type:'pie',
-      data:{ labels:['Media','Text'], datasets:[{data:[data.mediaVsText.media, data.mediaVsText.text],
-        backgroundColor:['#ff9933','#3399ff']}] },
-      options:{ responsive:true, maintainAspectRatio:false }
-    });
-  }
-
-  // Replies vs Standalone pie chart
-  if(data.repliesVsStandalone){
-    const ctx=document.getElementById(\`\${feedId}-repliesChart\`).getContext('2d');
-    new Chart(ctx,{ type:'pie',
-      data:{ labels:['Replies','Standalone'], datasets:[{data:[data.repliesVsStandalone.replies, data.repliesVsStandalone.standalone],
-        backgroundColor:['#66cc66','#cc6666']}] },
-      options:{ responsive:true, maintainAspectRatio:false }
-    });
-  }
-
   // Trending tags
   const tagsEl=document.getElementById(\`\${feedId}-tags\`);
   if(data.trendingTags){ tagsEl.innerHTML=data.trendingTags.map(t=>'<li>#'+t.tag+' ('+t.count+')</li>').join(''); }
-
-  // Top authors
-  const authorsEl=document.getElementById(\`\${feedId}-authors\`);
-  if(data.topAuthors){ authorsEl.innerHTML=data.topAuthors.map(a=>'<li>'+a.author+' ('+a.count+')</li>').join(''); }
 
   // Heatmap
   const heatmapEl=document.getElementById(\`\${feedId}-heatmap\`);
@@ -185,10 +153,9 @@ function updateFeedCard(feedId, data){
 
 async function initDashboard(){
   const feeds=${JSON.stringify(feeds)};
-  for(const feed of feeds){
-    const data=await fetchAnalytics(feed.name);
-    updateFeedCard(feed.name, data);
-  }
+  // Fetch all feed analytics in parallel for faster loading
+  const results = await Promise.all(feeds.map(feed => fetchAnalytics(feed.name)));
+  feeds.forEach((feed, idx) => updateFeedCard(feed.name, results[idx]));
 }
 document.addEventListener('DOMContentLoaded', initDashboard);
 </script>
