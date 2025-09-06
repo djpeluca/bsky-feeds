@@ -94,7 +94,7 @@ export abstract class BaseFeedManager extends AlgoManager {
     try {
       await this.db.removeTagFromOldPosts(
         this.name,
-        Date.now() - 10 * 24 * 60 * 60 * 1000,
+        Date.now() - 15 * 24 * 60 * 60 * 1000,
       )
     } catch (error) {
       console.error(`${this.name}: Error removing old posts:`, error)
