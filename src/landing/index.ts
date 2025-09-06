@@ -35,7 +35,6 @@ export const createLandingPageRouter = (ctx: AppContext) => {
 
   router.get('/', async (req, res) => {
     try {
-      // Filter out the "external" feed
       const feedAlgos = Object.keys(algos)
         .filter(key => key !== 'external')
         .map(key => ({
@@ -71,6 +70,8 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
 .stat-item { margin: 0.5rem 0; display: flex; justify-content: space-between; }
 .trend-up { color: green; }
 .trend-down { color: red; }
+.heatmap-wrapper { display: flex; }
+.heatmap-labels { display: flex; flex-direction: column; justify-content: space-between; margin-right: 4px; font-size:0.8rem; }
 .heatmap { display: grid; grid-template-columns: repeat(24, 1fr); gap: 1px; }
 .heatmap-cell { width: 100%; padding-top: 100%; position: relative; }
 .heatmap-cell div { position: absolute; top:0; left:0; right:0; bottom:0; text-align:center; font-size:0.6rem; }
@@ -88,7 +89,10 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
         <div class="stats" id="${feed.name}-stats"><div class="loading">Loading analytics...</div></div>
         <div class="chart-container"><canvas id="${feed.name}-weeklyChart"></canvas></div>
         <h3>Activity Heatmap (Day × Hour)</h3>
-        <div class="heatmap" id="${feed.name}-heatmap"></div>
+        <div class="heatmap-wrapper">
+          <div class="heatmap-labels" id="${feed.name}-heatmap-labels"></div>
+          <div class="heatmap" id="${feed.name}-heatmap"></div>
+        </div>
       </div>
     `).join('')}
   </div>
@@ -134,22 +138,40 @@ function updateFeedCard(feedId, data){
     });
   }
 
-
-  // Heatmap
+  // Heatmap with visible DOW labels
   const heatmapEl=document.getElementById(\`\${feedId}-heatmap\`);
+  const labelEl=document.getElementById(\`\${feedId}-heatmap-labels\`);
   if(data.dowHourHeatmap){
     const maxCount = Math.max(...data.dowHourHeatmap.map(c=>c.count));
-    heatmapEl.innerHTML=data.dowHourHeatmap.map(c=>{
-      const intensity = maxCount>0 ? Math.round((c.count/maxCount)*255) : 0;
-      const color = 'rgb('+intensity+',0,'+(255-intensity)+')';
-      return '<div class="heatmap-cell" style="background:'+color+'"><div>'+ (c.count>0?c.count:'') +'</div></div>';
-    }).join('');
+    const dowLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+    heatmapEl.innerHTML='';
+    labelEl.innerHTML='';
+
+    for(let d=1; d<=7; d++){
+      // Add row label
+      const labelDiv = document.createElement('div');
+      labelDiv.style.height='calc(100% / 7)';
+      labelDiv.textContent = dowLabels[d-1];
+      labelEl.appendChild(labelDiv);
+
+      for(let h=0; h<24; h++){
+        const cell = data.dowHourHeatmap.find(c=>c.dow===d && c.hour===h);
+        const count = cell ? cell.count : 0;
+        const intensity = maxCount>0 ? Math.round((count/maxCount)*255) : 0;
+        const color = 'rgb('+intensity+',0,'+(255-intensity)+')';
+        const div = document.createElement('div');
+        div.className='heatmap-cell';
+        div.style.background=color;
+        div.innerHTML = '<div></div>'; // hide numbers
+        heatmapEl.appendChild(div);
+      }
+    }
   }
 }
 
 async function initDashboard(){
   const feeds=${JSON.stringify(feeds)};
-  // Load each feed separately to avoid blocking
   for(const feed of feeds){
     fetchAnalytics(feed.name).then(data => updateFeedCard(feed.name, data));
   }
