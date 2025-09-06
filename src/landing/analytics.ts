@@ -11,7 +11,6 @@ export interface FeedAnalytics {
   avgPostsPerDayTrend: number;
   timeDistribution: { hour: number; count: number }[];
   weeklyQuantity: { week: string; count: number }[];
-  trendingTags: { tag: string; count: number }[];
   dowHourHeatmap: { dow: number; hour: number; count: number }[];
 }
 
@@ -52,8 +51,6 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
 
   const timeDistribution = await getTimeDistribution(db, feedId, periodStart, now);
   const weeklyQuantity = await getWeeklyQuantity(db, feedId, getWeeksAgo(now, 12), now);
-
-  const trendingTags = await getTrendingTags(db, feedId, periodStart, now);
   const dowHourHeatmap = await getDowHourHeatmap(db, feedId, periodStart, now);
 
   const analyticsData: FeedAnalytics = {
@@ -66,7 +63,6 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
     avgPostsPerDayTrend,
     timeDistribution,
     weeklyQuantity,
-    trendingTags,
     dowHourHeatmap,
   };
 
@@ -183,36 +179,6 @@ async function getWeeklyQuantity(db: any, feedId: string, startDate: Date, endDa
     return [];
   }
 }
-
-async function getTrendingTags(db: any, feedId: string, startDate: Date, endDate: Date) {
-  try {
-    const result = await db
-      .collection('post')
-      .aggregate([
-        {
-          $match: {
-            algoTags: feedId,
-            indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() },
-            tags: { $ne: null },
-          },
-        },
-        { $unwind: '$tags' },
-        // Normalize tags to lowercase
-        { $addFields: { tagLower: { $toLower: '$tags' } } },
-        { $group: { _id: '$tagLower', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 10 },
-        { $project: { _id: 0, tag: '$_id', count: 1 } },
-      ])
-      .toArray();
-
-    return result;
-  } catch (error) {
-    console.error(`Error getting trending tags for feed ${feedId}:`, error);
-    return [];
-  }
-}
-
 
 async function getDowHourHeatmap(db: any, feedId: string, startDate: Date, endDate: Date) {
   try {
