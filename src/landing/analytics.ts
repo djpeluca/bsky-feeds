@@ -50,7 +50,8 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   const avgPostsPerDayTrend = calculateTrend(avgPostsPerDay, previousAvgPostsPerDay);
 
   const timeDistribution = await getTimeDistribution(db, feedId, periodStart, now);
-  const weeklyQuantity = await getWeeklyQuantity(db, feedId, getWeeksAgo(now, 12), now);
+  // Only fetch the last 7 days
+  const weeklyQuantity = await getWeeklyQuantity(db, feedId, getWeeksAgo(now, 1), now);
   const dowHourHeatmap = await getDowHourHeatmap(db, feedId, periodStart, now);
 
   const analyticsData: FeedAnalytics = {
@@ -164,7 +165,7 @@ async function getTimeDistribution(db: any, feedId: string, startDate: Date, end
 
 async function getWeeklyQuantity(db: any, feedId: string, startDate: Date, endDate: Date) {
   try {
-    return await db
+    const result = await db
       .collection('post')
       .aggregate([
         { $match: { algoTags: feedId, indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() } } },
@@ -174,6 +175,9 @@ async function getWeeklyQuantity(db: any, feedId: string, startDate: Date, endDa
         { $sort: { week: 1 } },
       ])
       .toArray();
+
+    // Return only last 7 days
+    return result.slice(-7);
   } catch (error) {
     console.error(`Error getting weekly quantity for feed ${feedId}:`, error);
     return [];

@@ -128,7 +128,7 @@ function updateFeedCard(feedId, data){
     const ctx=document.getElementById(\`\${feedId}-weeklyChart\`).getContext('2d');
     new Chart(ctx,{ type:'bar',
       data:{ labels:data.weeklyQuantity.map(d=>d.week), 
-             datasets:[{label:'Posts per Week', data:data.weeklyQuantity.map(d=>d.count),
+             datasets:[{label:'Posts per Day', data:data.weeklyQuantity.map(d=>d.count),
                         backgroundColor:'rgba(0,102,204,0.7)', borderColor:'rgba(0,102,204,1)', borderWidth:1}]},
       options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } } }
     });
