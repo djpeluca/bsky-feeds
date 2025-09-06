@@ -35,10 +35,13 @@ export const createLandingPageRouter = (ctx: AppContext) => {
 
   router.get('/', async (req, res) => {
     try {
-      const feedAlgos = Object.keys(algos).map(key => ({
-        name: key,
-        displayName: key.charAt(0).toUpperCase() + key.slice(1),
-      }));
+      // Filter out the "external" feed
+      const feedAlgos = Object.keys(algos)
+        .filter(key => key !== 'external')
+        .map(key => ({
+          name: key,
+          displayName: key.charAt(0).toUpperCase() + key.slice(1),
+        }));
       res.send(generateLandingPageHTML(feedAlgos));
     } catch (error) {
       console.error('Error rendering landing page:', error);
@@ -131,6 +134,7 @@ function updateFeedCard(feedId, data){
     });
   }
 
+
   // Heatmap
   const heatmapEl=document.getElementById(\`\${feedId}-heatmap\`);
   if(data.dowHourHeatmap){
@@ -145,7 +149,7 @@ function updateFeedCard(feedId, data){
 
 async function initDashboard(){
   const feeds=${JSON.stringify(feeds)};
-  // Fetch each feed individually to prevent blocking
+  // Load each feed separately to avoid blocking
   for(const feed of feeds){
     fetchAnalytics(feed.name).then(data => updateFeedCard(feed.name, data));
   }
