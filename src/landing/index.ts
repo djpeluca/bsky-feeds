@@ -101,7 +101,7 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
   </div>
 </div>
 <script defer>
-async function fetchAnalytics(feedId, timeout=20000){
+async function fetchAnalytics(feedId, timeout=40000){
   const controller = new AbortController();
   const timer = setTimeout(()=>controller.abort(), timeout);
   try{
