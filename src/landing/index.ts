@@ -70,11 +70,14 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
 .stat-item { margin: 0.5rem 0; display: flex; justify-content: space-between; }
 .trend-up { color: green; }
 .trend-down { color: red; }
-.heatmap-wrapper { display: flex; }
-.heatmap-labels { display: flex; flex-direction: column; justify-content: space-between; margin-right: 4px; font-size:0.8rem; }
-.heatmap { display: grid; grid-template-columns: repeat(24, 1fr); gap: 1px; }
-.heatmap-cell { width: 100%; padding-top: 100%; position: relative; }
-.heatmap-cell div { position: absolute; top:0; left:0; right:0; bottom:0; text-align:center; font-size:0.6rem; }
+
+.heatmap-wrapper { display: flex; gap: 4px; }
+.heatmap-labels { display: flex; flex-direction: column; justify-content: flex-start; font-size:0.8rem; line-height:1; }
+.heatmap-labels div { flex:1; display:flex; align-items:center; justify-content:flex-end; padding-right:4px; }
+
+.heatmap { display: flex; flex-direction: column; gap:2px; flex:1; }
+.heatmap-row { display: grid; grid-template-columns: repeat(24, 1fr); gap:1px; height:20px; }
+.heatmap-cell { width: 100%; height: 100%; }
 .loading { color: gray; }
 .error { color: red; }
 </style>
@@ -138,7 +141,7 @@ function updateFeedCard(feedId, data){
     });
   }
 
-  // Heatmap with visible DOW labels
+  // Heatmap with visible DOW labels and fixed cell size
   const heatmapEl=document.getElementById(\`\${feedId}-heatmap\`);
   const labelEl=document.getElementById(\`\${feedId}-heatmap-labels\`);
   if(data.dowHourHeatmap){
@@ -149,23 +152,27 @@ function updateFeedCard(feedId, data){
     labelEl.innerHTML='';
 
     for(let d=1; d<=7; d++){
-      // Add row label
+      // Label
       const labelDiv = document.createElement('div');
-      labelDiv.style.height='calc(100% / 7)';
       labelDiv.textContent = dowLabels[d-1];
       labelEl.appendChild(labelDiv);
+
+      // Row
+      const rowDiv = document.createElement('div');
+      rowDiv.className='heatmap-row';
 
       for(let h=0; h<24; h++){
         const cell = data.dowHourHeatmap.find(c=>c.dow===d && c.hour===h);
         const count = cell ? cell.count : 0;
         const intensity = maxCount>0 ? Math.round((count/maxCount)*255) : 0;
         const color = 'rgb('+intensity+',0,'+(255-intensity)+')';
-        const div = document.createElement('div');
-        div.className='heatmap-cell';
-        div.style.background=color;
-        div.innerHTML = '<div></div>'; // hide numbers
-        heatmapEl.appendChild(div);
+
+        const cellDiv = document.createElement('div');
+        cellDiv.className='heatmap-cell';
+        cellDiv.style.background=color;
+        rowDiv.appendChild(cellDiv);
       }
+      heatmapEl.appendChild(rowDiv);
     }
   }
 }
