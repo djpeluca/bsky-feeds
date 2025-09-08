@@ -35,12 +35,23 @@ export const createLandingPageRouter = (ctx: AppContext) => {
 
   router.get('/', async (req, res) => {
     try {
-      const feedAlgos = Object.keys(algos)
+      let feedAlgos = Object.keys(algos)
         .filter(key => key !== 'external')
         .map(key => ({
           name: key,
           displayName: key.charAt(0).toUpperCase() + key.slice(1),
         }));
+
+      // Apply display name fixes
+      feedAlgos = feedAlgos.map(f => {
+        if (f.name === 'ai') f.displayName = 'AI';
+        return f;
+      });
+
+      // Reorder feeds: Uruguay, Argentina, Brasil, Rio de la Plata, Peñarol, fediverse, AI, Salesforce
+      const order = ['uruguay','argentina','brasil','riodelaplata','penarol','fediverse','ai','salesforce'];
+      feedAlgos.sort((a,b) => order.indexOf(a.name) - order.indexOf(b.name));
+
       res.send(generateLandingPageHTML(feedAlgos));
     } catch (error) {
       console.error('Error rendering landing page:', error);
@@ -52,6 +63,7 @@ export const createLandingPageRouter = (ctx: AppContext) => {
 };
 
 function generateLandingPageHTML(feeds: { name: string; displayName: string }[]) {
+  const GMT3_FEEDS = ['uruguay','argentina','riodelaplata','brasil'];
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -91,7 +103,7 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
 <div class="container">
   <div class="dashboard">
     ${feeds.map(feed => `
-      <div class="card" id="${feed.name}-card">
+      <div class="card" id="${feed.name}-card" data-tz="${GMT3_FEEDS.includes(feed.name)?'gmt-3':'utc'}">
         <h2>${feed.displayName}</h2>
         <div class="stats" id="${feed.name}-stats"><div class="loading">Loading analytics...</div></div>
         <div class="chart-container"><canvas id="${feed.name}-weeklyChart"></canvas></div>
@@ -157,7 +169,7 @@ function updateFeedCard(feedId, data){
     });
   }
 
-  // Heatmap: convert UTC → local time
+  // Heatmap (backend already returns in proper timezone)
   const heatmapEl=document.getElementById(\`\${feedId}-heatmap\`);
   const labelEl=document.getElementById(\`\${feedId}-heatmap-labels\`);
   if(data.dowHourHeatmap){
@@ -166,8 +178,6 @@ function updateFeedCard(feedId, data){
 
     heatmapEl.innerHTML='';
     labelEl.innerHTML='';
-
-    const offsetHours = -new Date().getTimezoneOffset() / 60;
 
     for(let d=1; d<=7; d++){
       const labelDiv = document.createElement('div');
@@ -178,9 +188,7 @@ function updateFeedCard(feedId, data){
       rowDiv.className='heatmap-row';
 
       for(let h=0; h<24; h++){
-        // Shift UTC hour to local hour for lookup
-        const shiftedHour = (h - offsetHours + 24) % 24;
-        const cell = data.dowHourHeatmap.find(c => c.dow === d && c.hour === shiftedHour);
+        const cell = data.dowHourHeatmap.find(c => c.dow === d && c.hour === h);
         const count = cell ? cell.count : 0;
         const intensity = maxCount>0 ? Math.round((count/maxCount)*255) : 0;
         const color = 'rgb('+intensity+',0,'+(255-intensity)+')';
