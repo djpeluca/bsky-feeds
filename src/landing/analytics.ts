@@ -165,15 +165,16 @@ async function getTimeDistribution(db: any, feedId: string, startDate: Date, end
 }
 
 // --- New: get last 7 days quantity ---
+// --- New: get last 7 days quantity ---
 async function getDailyQuantity(db: any, feedId: string, endDate: Date, tz?: string) {
   try {
-    // Make endDate = "now"
-    const now = new Date(endDate);
+    // Normalize "today" to local midnight in the given timezone
+    const todayStr = endDate.toLocaleDateString('en-CA', { timeZone: tz || 'UTC' });
+    const todayMidnight = new Date(todayStr + 'T00:00:00' + (tz ? '' : 'Z')); // if UTC, add "Z"
 
     // Start = 6 days before today (so we cover 7 days total, including today)
-    const startDate = new Date(now);
-    startDate.setUTCHours(0, 0, 0, 0);
-    startDate.setUTCDate(now.getUTCDate() - 6);
+    const startDate = new Date(todayMidnight);
+    startDate.setDate(startDate.getDate() - 6);
 
     const result = await db
       .collection('post')
@@ -181,7 +182,7 @@ async function getDailyQuantity(db: any, feedId: string, endDate: Date, tz?: str
         {
           $match: {
             algoTags: feedId,
-            indexedAt: { $gte: startDate.getTime(), $lte: now.getTime() },
+            indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() },
           },
         },
         {
@@ -190,7 +191,7 @@ async function getDailyQuantity(db: any, feedId: string, endDate: Date, tz?: str
               $dateToString: {
                 format: '%Y-%m-%d',
                 date: { $toDate: '$indexedAt' },
-                timezone: tz || 'UTC', // consistent timezone handling
+                timezone: tz || 'UTC',
               },
             },
           },
@@ -201,21 +202,12 @@ async function getDailyQuantity(db: any, feedId: string, endDate: Date, tz?: str
       ])
       .toArray();
 
-    // Helper to format consistently with Mongo
-    const formatDate = (d: Date, tz?: string) => {
-      if (tz) {
-        return d.toLocaleDateString('en-CA', { timeZone: tz }); // YYYY-MM-DD
-      } else {
-        return d.toISOString().split('T')[0]; // UTC normalized
-      }
-    };
-
-    // Fill in exactly 7 days (ending today)
+    // Fill in exactly 7 days (local timezone)
     const days: { day: string; count: number }[] = [];
     for (let i = 0; i < 7; i++) {
       const d = new Date(startDate);
-      d.setUTCDate(startDate.getUTCDate() + i);
-      const dayStr = formatDate(d, tz);
+      d.setDate(startDate.getDate() + i);
+      const dayStr = d.toLocaleDateString('en-CA', { timeZone: tz || 'UTC' });
       const found = result.find((r) => r.day === dayStr);
       days.push({ day: dayStr, count: found ? found.count : 0 });
     }
