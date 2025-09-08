@@ -177,10 +177,10 @@ function updateFeedCard(feedId, data){
       const rowDiv = document.createElement('div');
       rowDiv.className='heatmap-row';
 
-      const cells = [];
       for(let h=0; h<24; h++){
-        const localHour = (h + offsetHours + 24) % 24;
-        const cell = data.dowHourHeatmap.find(c=>c.dow===d && c.hour===h);
+        // Shift UTC hour to local hour for lookup
+        const shiftedHour = (h - offsetHours + 24) % 24;
+        const cell = data.dowHourHeatmap.find(c => c.dow === d && c.hour === shiftedHour);
         const count = cell ? cell.count : 0;
         const intensity = maxCount>0 ? Math.round((count/maxCount)*255) : 0;
         const color = 'rgb('+intensity+',0,'+(255-intensity)+')';
@@ -188,9 +188,8 @@ function updateFeedCard(feedId, data){
         const cellDiv = document.createElement('div');
         cellDiv.className='heatmap-cell';
         cellDiv.style.background=color;
-        cells.push(cellDiv);
+        rowDiv.appendChild(cellDiv);
       }
-      cells.forEach(c=>rowDiv.appendChild(c));
       heatmapEl.appendChild(rowDiv);
     }
   }
