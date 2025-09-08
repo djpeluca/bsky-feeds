@@ -79,9 +79,9 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
 .heatmap-labels { display: flex; flex-direction: column; justify-content: flex-start; font-size:0.8rem; line-height:1; }
 .heatmap-labels div { flex:1; display:flex; align-items:center; justify-content:flex-end; padding-right:4px; }
 
-.heatmap { display: flex; flex-direction: column; gap:2px; flex:1; overflow-x: auto; }
-.heatmap-row { display: flex; }
-.heatmap-cell { width: 20px; height: 20px; flex: 0 0 auto; }
+.heatmap { display: flex; flex-direction: column; gap:2px; flex:1; }
+.heatmap-row { display: flex; width: 100%; }
+.heatmap-cell { flex:1; aspect-ratio: 1 / 1; } /* cells scale to fit full width */
 .loading { color: gray; }
 .error { color: red; }
 </style>
@@ -177,6 +177,7 @@ function updateFeedCard(feedId, data){
       const rowDiv = document.createElement('div');
       rowDiv.className='heatmap-row';
 
+      const cells = [];
       for(let h=0; h<24; h++){
         const localHour = (h + offsetHours + 24) % 24;
         const cell = data.dowHourHeatmap.find(c=>c.dow===d && c.hour===h);
@@ -187,8 +188,9 @@ function updateFeedCard(feedId, data){
         const cellDiv = document.createElement('div');
         cellDiv.className='heatmap-cell';
         cellDiv.style.background=color;
-        rowDiv.appendChild(cellDiv);
+        cells.push(cellDiv);
       }
+      cells.forEach(c=>rowDiv.appendChild(c));
       heatmapEl.appendChild(rowDiv);
     }
   }
