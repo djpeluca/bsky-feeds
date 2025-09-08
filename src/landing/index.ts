@@ -48,11 +48,22 @@ export const createLandingPageRouter = (ctx: AppContext) => {
         return f;
       });
 
-      // Reorder feeds: Uruguay, Argentina, Brasil, Rio de la Plata, Peñarol, fediverse, AI, Salesforce
-      const order = ['uruguay','argentina','brasil','riodelaplata','penarol','fediverse','ai','salesforce'];
-      feedAlgos.sort((a,b) => order.indexOf(a.name) - order.indexOf(b.name));
+      // Split blocks
+      const regionalOrder = ['uruguay','argentina','brasil','riodelaplata','penarol'];
+      const techOrder = ['fediverse','ai','salesforce'];
 
-      res.send(generateLandingPageHTML(feedAlgos));
+      const regionalFeeds = feedAlgos
+        .filter(f => regionalOrder.includes(f.name))
+        .sort((a,b) => regionalOrder.indexOf(a.name) - regionalOrder.indexOf(b.name));
+
+      const techFeeds = feedAlgos
+        .filter(f => techOrder.includes(f.name))
+        .sort((a,b) => techOrder.indexOf(a.name) - techOrder.indexOf(b.name));
+
+      // Combine blocks
+      const orderedFeeds = [...regionalFeeds, ...techFeeds];
+
+      res.send(generateLandingPageHTML(orderedFeeds, regionalFeeds.map(f=>f.name)));
     } catch (error) {
       console.error('Error rendering landing page:', error);
       res.status(500).send('Internal Server Error');
@@ -62,8 +73,7 @@ export const createLandingPageRouter = (ctx: AppContext) => {
   return router;
 };
 
-function generateLandingPageHTML(feeds: { name: string; displayName: string }[]) {
-  const GMT3_FEEDS = ['uruguay','argentina','riodelaplata','brasil'];
+function generateLandingPageHTML(feeds: { name: string; displayName: string }[], GMT3_FEEDS: string[]) {
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -77,6 +87,7 @@ body { font-family: Arial; margin: 0; background: #f4f4f4; }
 header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
 .container { max-width: 1400px; margin: auto; padding: 1rem; }
 .dashboard { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; }
+.block-title { width: 100%; font-size: 1.2rem; margin-top: 2rem; margin-bottom: 0.5rem; font-weight: bold; }
 .card { background: white; padding: 1rem; border-radius: 8px; flex: 1 1 450px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 .chart-container { height: 250px; }
 
@@ -96,13 +107,15 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
 .heatmap-cell { flex:1; aspect-ratio: 1 / 1; } /* cells scale to fit full width */
 .loading { color: gray; }
 .error { color: red; }
+
 </style>
 </head>
 <body>
 <header><h1>Bsky Feeds Analytics Dashboard</h1></header>
 <div class="container">
   <div class="dashboard">
-    ${feeds.map(feed => `
+    <div class="block-title">Regional Feeds</div>
+    ${feeds.filter(f=>GMT3_FEEDS.includes(f.name)).map(feed => `
       <div class="card" id="${feed.name}-card" data-tz="${GMT3_FEEDS.includes(feed.name)?'gmt-3':'utc'}">
         <h2>${feed.displayName}</h2>
         <div class="stats" id="${feed.name}-stats"><div class="loading">Loading analytics...</div></div>
@@ -114,8 +127,23 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
         </div>
       </div>
     `).join('')}
+
+    <div class="block-title">Tech Feeds</div>
+    ${feeds.filter(f=>!GMT3_FEEDS.includes(f.name)).map(feed => `
+      <div class="card" id="${feed.name}-card" data-tz="utc">
+        <h2>${feed.displayName}</h2>
+        <div class="stats" id="${feed.name}-stats"><div class="loading">Loading analytics...</div></div>
+        <div class="chart-container"><canvas id="${feed.name}-weeklyChart"></canvas></div>
+        <h3>Activity Heatmap (Day × Hour, UTC)</h3>
+        <div class="heatmap-wrapper">
+          <div class="heatmap-labels" id="${feed.name}-heatmap-labels"></div>
+          <div class="heatmap" id="${feed.name}-heatmap"></div>
+        </div>
+      </div>
+    `).join('')}
   </div>
 </div>
+
 <script defer>
 async function fetchAnalytics(feedId, timeout=60000){
   const controller = new AbortController();
@@ -212,5 +240,6 @@ async function initDashboard(){
 document.addEventListener('DOMContentLoaded', initDashboard);
 </script>
 </body>
-</html>`;
+</html>
+`;
 }
