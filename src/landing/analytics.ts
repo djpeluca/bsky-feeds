@@ -164,17 +164,16 @@ async function getTimeDistribution(db: any, feedId: string, startDate: Date, end
   }
 }
 
-// --- New: get last 7 days quantity ---
-// --- New: get last 7 days quantity ---
 async function getDailyQuantity(db: any, feedId: string, endDate: Date, tz?: string) {
   try {
-    // Normalize "today" to local midnight in the given timezone
-    const todayStr = endDate.toLocaleDateString('en-CA', { timeZone: tz || 'UTC' });
-    const todayMidnight = new Date(todayStr + 'T00:00:00' + (tz ? '' : 'Z')); // if UTC, add "Z"
+    const now = new Date();
+    const nowLocal = tz
+      ? new Date(now.toLocaleString('en-US', { timeZone: tz }))
+      : now;
 
-    // Start = 6 days before today (so we cover 7 days total, including today)
-    const startDate = new Date(todayMidnight);
-    startDate.setDate(startDate.getDate() - 6);
+    const startDateLocal = new Date(nowLocal);
+    startDateLocal.setHours(0, 0, 0, 0);
+    startDateLocal.setDate(startDateLocal.getDate() - 6); // last 7 days
 
     const result = await db
       .collection('post')
@@ -182,7 +181,7 @@ async function getDailyQuantity(db: any, feedId: string, endDate: Date, tz?: str
         {
           $match: {
             algoTags: feedId,
-            indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() },
+            indexedAt: { $gte: startDateLocal.getTime(), $lte: nowLocal.getTime() },
           },
         },
         {
@@ -202,12 +201,13 @@ async function getDailyQuantity(db: any, feedId: string, endDate: Date, tz?: str
       ])
       .toArray();
 
-    // Fill in exactly 7 days (local timezone)
     const days: { day: string; count: number }[] = [];
     for (let i = 0; i < 7; i++) {
-      const d = new Date(startDate);
-      d.setDate(startDate.getDate() + i);
-      const dayStr = d.toLocaleDateString('en-CA', { timeZone: tz || 'UTC' });
+      const d = new Date(startDateLocal);
+      d.setDate(startDateLocal.getDate() + i);
+      const dayStr = tz
+        ? d.toLocaleDateString('en-CA', { timeZone: tz })
+        : d.toISOString().split('T')[0];
       const found = result.find((r) => r.day === dayStr);
       days.push({ day: dayStr, count: found ? found.count : 0 });
     }

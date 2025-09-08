@@ -91,9 +91,8 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
   background: white; 
   padding: 1rem; 
   border-radius: 8px; 
-  flex: 0 1 calc(50% - 1rem);   /* two columns */
-  max-width: calc(50% - 1rem);  /* prevent stretching */
-  min-width: 450px;             /* keep base size */
+  flex: 1 1 calc(50% - 1rem); /* flexible two columns */
+  max-width: calc(50% - 1rem);  
   box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
 }
 
