@@ -168,15 +168,27 @@ async function getTimeDistribution(db: any, feedId: string, startDate: Date, end
 async function getDailyQuantity(db: any, feedId: string, endDate: Date, tz?: string) {
   try {
     const startDate = new Date(endDate);
-    startDate.setDate(endDate.getDate() - 6); // last 7 days including today
+    startDate.setUTCHours(0, 0, 0, 0);
+    startDate.setDate(endDate.getUTCDate() - 6); // last 7 days
 
     const result = await db
       .collection('post')
       .aggregate([
-        { $match: { algoTags: feedId, indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() } } },
+        {
+          $match: {
+            algoTags: feedId,
+            indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() },
+          },
+        },
         {
           $addFields: {
-            day: { $dateToString: { format: '%Y-%m-%d', date: { $toDate: '$indexedAt' }, timezone: tz } },
+            day: {
+              $dateToString: {
+                format: '%Y-%m-%d',
+                date: { $toDate: '$indexedAt' },
+                timezone: tz || 'UTC', // <-- force UTC if no tz
+              },
+            },
           },
         },
         { $group: { _id: '$day', count: { $sum: 1 } } },
@@ -185,13 +197,22 @@ async function getDailyQuantity(db: any, feedId: string, endDate: Date, tz?: str
       ])
       .toArray();
 
+    // Helper to format consistently with Mongo
+    const formatDate = (d: Date, tz?: string) => {
+      if (tz) {
+        return d.toLocaleDateString('en-CA', { timeZone: tz }); // YYYY-MM-DD
+      } else {
+        return d.toISOString().split('T')[0]; // UTC normalized
+      }
+    };
+
     // Fill in missing days
     const days: { day: string; count: number }[] = [];
     for (let i = 0; i < 7; i++) {
       const d = new Date(startDate);
-      d.setDate(startDate.getDate() + i);
-      const dayStr = d.toISOString().split('T')[0];
-      const found = result.find(r => r.day === dayStr);
+      d.setUTCDate(startDate.getUTCDate() + i);
+      const dayStr = formatDate(d, tz);
+      const found = result.find((r) => r.day === dayStr);
       days.push({ day: dayStr, count: found ? found.count : 0 });
     }
 
@@ -201,6 +222,7 @@ async function getDailyQuantity(db: any, feedId: string, endDate: Date, tz?: str
     return [];
   }
 }
+
 
 async function getDowHourHeatmap(db: any, feedId: string, startDate: Date, endDate: Date, tz?: string) {
   try {
