@@ -185,7 +185,7 @@ function updateFeedCard(feedId, data){
     const ctx = document.getElementById(\`\${feedId}-weeklyChart\`).getContext('2d');
     if (Chart.getChart(ctx)) Chart.getChart(ctx).destroy();
     new Chart(ctx,{ type:'bar',
-      data:{ labels:data.dailyQuantity.map(d=>d.week), 
+      data:{ labels:data.dailyQuantity.map(d=>d.day), 
              datasets:[{label:'Posts per Day', data:data.dailyQuantity.map(d=>d.count),
                         backgroundColor:'rgba(0,102,204,0.7)', borderColor:'rgba(0,102,204,1)', borderWidth:1}]},
       options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } } }
