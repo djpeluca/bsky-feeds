@@ -95,7 +95,7 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
         <h2>${feed.displayName}</h2>
         <div class="stats" id="${feed.name}-stats"><div class="loading">Loading analytics...</div></div>
         <div class="chart-container"><canvas id="${feed.name}-weeklyChart"></canvas></div>
-        <h3>Activity Heatmap (Day × Hour)</h3>
+        <h3>Activity Heatmap (Day × Hour, local time)</h3>
         <div class="heatmap-wrapper">
           <div class="heatmap-labels" id="${feed.name}-heatmap-labels"></div>
           <div class="heatmap" id="${feed.name}-heatmap"></div>
@@ -157,7 +157,7 @@ function updateFeedCard(feedId, data){
     });
   }
 
-  // Heatmap with visible DOW labels and fixed cell size
+  // Heatmap: convert UTC → local time
   const heatmapEl=document.getElementById(\`\${feedId}-heatmap\`);
   const labelEl=document.getElementById(\`\${feedId}-heatmap-labels\`);
   if(data.dowHourHeatmap){
@@ -166,6 +166,9 @@ function updateFeedCard(feedId, data){
 
     heatmapEl.innerHTML='';
     labelEl.innerHTML='';
+
+    // browser offset in hours (e.g. -180 → -3h)
+    const offsetHours = -new Date().getTimezoneOffset() / 60;
 
     for(let d=1; d<=7; d++){
       // Label
@@ -178,6 +181,9 @@ function updateFeedCard(feedId, data){
       rowDiv.className='heatmap-row';
 
       for(let h=0; h<24; h++){
+        // shift column index to local
+        const localHour = (h + offsetHours + 24) % 24;
+
         const cell = data.dowHourHeatmap.find(c=>c.dow===d && c.hour===h);
         const count = cell ? cell.count : 0;
         const intensity = maxCount>0 ? Math.round((count/maxCount)*255) : 0;
@@ -186,6 +192,8 @@ function updateFeedCard(feedId, data){
         const cellDiv = document.createElement('div');
         cellDiv.className='heatmap-cell';
         cellDiv.style.background=color;
+        // place at correct local hour
+        cellDiv.style.gridColumn = localHour + 1;
         rowDiv.appendChild(cellDiv);
       }
       heatmapEl.appendChild(rowDiv);
