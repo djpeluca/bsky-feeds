@@ -82,9 +82,18 @@ function generateLandingPageHTML(feeds: { name: string; displayName: string }[],
 body { font-family: Arial; margin: 0; background: #f4f4f4; }
 header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
 .container { max-width: 1400px; margin: auto; padding: 1rem; }
-.dashboard { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; }
+
+.dashboard { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: flex-start; }
 .block-title { width: 100%; font-size: 1.2rem; margin-top: 2rem; margin-bottom: 0.5rem; font-weight: bold; }
-.card { background: white; padding: 1rem; border-radius: 8px; flex: 1 1 450px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+.card { 
+  background: white; 
+  padding: 1rem; 
+  border-radius: 8px; 
+  flex: 0 1 calc(50% - 1rem);   /* two columns */
+  max-width: calc(50% - 1rem);  /* prevent stretching */
+  min-width: 450px;             /* keep base size */
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+}
 .chart-container { height: 250px; }
 
 .stat-item { display: flex; align-items: center; margin: 0.5rem 0; }

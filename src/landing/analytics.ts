@@ -167,9 +167,13 @@ async function getTimeDistribution(db: any, feedId: string, startDate: Date, end
 // --- New: get last 7 days quantity ---
 async function getDailyQuantity(db: any, feedId: string, endDate: Date, tz?: string) {
   try {
-    const startDate = new Date(endDate);
+    // Make endDate = "now"
+    const now = new Date(endDate);
+
+    // Start = 6 days before today (so we cover 7 days total, including today)
+    const startDate = new Date(now);
     startDate.setUTCHours(0, 0, 0, 0);
-    startDate.setDate(endDate.getUTCDate() - 6); // last 7 days
+    startDate.setUTCDate(now.getUTCDate() - 6);
 
     const result = await db
       .collection('post')
@@ -177,7 +181,7 @@ async function getDailyQuantity(db: any, feedId: string, endDate: Date, tz?: str
         {
           $match: {
             algoTags: feedId,
-            indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() },
+            indexedAt: { $gte: startDate.getTime(), $lte: now.getTime() },
           },
         },
         {
@@ -186,7 +190,7 @@ async function getDailyQuantity(db: any, feedId: string, endDate: Date, tz?: str
               $dateToString: {
                 format: '%Y-%m-%d',
                 date: { $toDate: '$indexedAt' },
-                timezone: tz || 'UTC', // <-- force UTC if no tz
+                timezone: tz || 'UTC', // consistent timezone handling
               },
             },
           },
@@ -206,7 +210,7 @@ async function getDailyQuantity(db: any, feedId: string, endDate: Date, tz?: str
       }
     };
 
-    // Fill in missing days
+    // Fill in exactly 7 days (ending today)
     const days: { day: string; count: number }[] = [];
     for (let i = 0; i < 7; i++) {
       const d = new Date(startDate);
@@ -222,7 +226,6 @@ async function getDailyQuantity(db: any, feedId: string, endDate: Date, tz?: str
     return [];
   }
 }
-
 
 async function getDowHourHeatmap(db: any, feedId: string, startDate: Date, endDate: Date, tz?: string) {
   try {
