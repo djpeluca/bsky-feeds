@@ -10,7 +10,7 @@ export interface FeedAnalytics {
   uniqueAuthorsTrend: number;
   avgPostsPerDayTrend: number;
   timeDistribution: { hour: number; count: number }[];
-  weeklyQuantity: { week: string; count: number }[];
+  dailyQuantity: { day: string; count: number }[];   // <-- fixed
   dowHourHeatmap: { dow: number; hour: number; count: number }[];
 }
 
@@ -55,7 +55,7 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   const avgPostsPerDayTrend = calculateTrend(avgPostsPerDay, previousAvgPostsPerDay);
 
   const timeDistribution = await getTimeDistribution(db, feedId, periodStart, now, tz);
-  const weeklyQuantity = await getWeeklyQuantity(db, feedId, getWeeksAgo(now, 7), now, tz); // last 7 weeks
+  const dailyQuantity = await getDailyQuantity(db, feedId, now, tz);  // <-- fixed
   const dowHourHeatmap = await getDowHourHeatmap(db, feedId, periodStart, now, tz);
 
   const analyticsData: FeedAnalytics = {
@@ -67,7 +67,7 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
     uniqueAuthorsTrend,
     avgPostsPerDayTrend,
     timeDistribution,
-    weeklyQuantity,
+    dailyQuantity,   // <-- fixed
     dowHourHeatmap,
   };
 
@@ -105,12 +105,6 @@ function getDaysInPeriod(startDate: Date, endDate: Date, tz?: string): number {
 function calculateTrend(current: number, previous: number): number {
   if (previous === 0) return current > 0 ? 100 : 0;
   return Math.round(((current - previous) / previous) * 100);
-}
-
-function getWeeksAgo(date: Date, weeks: number): Date {
-  const result = new Date(date);
-  result.setDate(result.getDate() - weeks * 7);
-  return result;
 }
 
 export function getAvailableFeeds() {
@@ -170,32 +164,40 @@ async function getTimeDistribution(db: any, feedId: string, startDate: Date, end
   }
 }
 
-async function getWeeklyQuantity(db: any, feedId: string, startDate: Date, endDate: Date, tz?: string) {
+// --- New: get last 7 days quantity ---
+async function getDailyQuantity(db: any, feedId: string, endDate: Date, tz?: string) {
   try {
+    const startDate = new Date(endDate);
+    startDate.setDate(endDate.getDate() - 6); // last 7 days including today
+
     const result = await db
       .collection('post')
       .aggregate([
         { $match: { algoTags: feedId, indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() } } },
-        { $addFields: { week: { $dateToString: { format: '%Y-%m-%d', date: { $toDate: '$indexedAt' }, timezone: tz } } } },
-        { $group: { _id: '$week', count: { $sum: 1 } } },
-        { $project: { _id: 0, week: '$_id', count: 1 } },
-        { $sort: { week: 1 } },
+        {
+          $addFields: {
+            day: { $dateToString: { format: '%Y-%m-%d', date: { $toDate: '$indexedAt' }, timezone: tz } },
+          },
+        },
+        { $group: { _id: '$day', count: { $sum: 1 } } },
+        { $project: { _id: 0, day: '$_id', count: 1 } },
+        { $sort: { day: 1 } },
       ])
       .toArray();
 
-    // Ensure 7 full weeks
-    const weeks: { week: string; count: number }[] = [];
-    const start = new Date(startDate);
+    // Fill in missing days
+    const days: { day: string; count: number }[] = [];
     for (let i = 0; i < 7; i++) {
-      const weekStart = new Date(start);
-      weekStart.setDate(start.getDate() + i * 7);
-      const weekStr = weekStart.toISOString().split('T')[0];
-      const found = result.find(r => r.week === weekStr);
-      weeks.push({ week: weekStr, count: found ? found.count : 0 });
+      const d = new Date(startDate);
+      d.setDate(startDate.getDate() + i);
+      const dayStr = d.toISOString().split('T')[0];
+      const found = result.find(r => r.day === dayStr);
+      days.push({ day: dayStr, count: found ? found.count : 0 });
     }
-    return weeks;
+
+    return days;
   } catch (error) {
-    console.error(`Error getting weekly quantity for feed ${feedId}:`, error);
+    console.error(`Error getting daily quantity for feed ${feedId}:`, error);
     return [];
   }
 }
