@@ -85,6 +85,8 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
 
 .dashboard { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: flex-start; }
 .block-title { width: 100%; font-size: 1.2rem; margin-top: 2rem; margin-bottom: 0.5rem; font-weight: bold; }
+
+/* Cards two-column layout for wide screens */
 .card { 
   background: white; 
   padding: 1rem; 
@@ -94,6 +96,15 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
   min-width: 450px;             /* keep base size */
   box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
 }
+
+/* Mobile: full width cards */
+@media(max-width: 900px) {
+  .card {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+}
+
 .chart-container { height: 250px; }
 
 .stat-item { display: flex; align-items: center; margin: 0.5rem 0; }
