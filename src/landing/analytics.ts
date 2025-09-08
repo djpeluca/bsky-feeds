@@ -33,6 +33,8 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   if (!algos[feedId]) throw new Error(`Feed ${feedId} not found`);
 
   const now = new Date();
+  const tz = GMT3_FEEDS.includes(feedId) ? 'America/Montevideo' : undefined;
+
   const periodStart = getPeriodStartDate(now, period);
   const previousPeriodStart = getPeriodStartDate(periodStart, period);
 
@@ -42,8 +44,8 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   const uniqueAuthors = await getUniqueAuthorsForFeed(db, feedId, periodStart, now);
   const previousUniqueAuthors = await getUniqueAuthorsForFeed(db, feedId, previousPeriodStart, periodStart);
 
-  const daysInPeriod = getDaysInPeriod(periodStart, now);
-  const daysInPreviousPeriod = getDaysInPeriod(previousPeriodStart, periodStart);
+  const daysInPeriod = getDaysInPeriod(periodStart, now, tz);
+  const daysInPreviousPeriod = getDaysInPeriod(previousPeriodStart, periodStart, tz);
 
   const avgPostsPerDay = daysInPeriod > 0 ? postCount / daysInPeriod : 0;
   const previousAvgPostsPerDay = daysInPreviousPeriod > 0 ? previousPostCount / daysInPreviousPeriod : 0;
@@ -52,10 +54,8 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   const uniqueAuthorsTrend = calculateTrend(uniqueAuthors, previousUniqueAuthors);
   const avgPostsPerDayTrend = calculateTrend(avgPostsPerDay, previousAvgPostsPerDay);
 
-  const tz = GMT3_FEEDS.includes(feedId) ? 'America/Montevideo' : undefined;
-
   const timeDistribution = await getTimeDistribution(db, feedId, periodStart, now, tz);
-  const weeklyQuantity = await getWeeklyQuantity(db, feedId, getWeeksAgo(now, 1), now, tz);
+  const weeklyQuantity = await getWeeklyQuantity(db, feedId, getWeeksAgo(now, 7), now, tz); // last 7 weeks
   const dowHourHeatmap = await getDowHourHeatmap(db, feedId, periodStart, now, tz);
 
   const analyticsData: FeedAnalytics = {
@@ -95,8 +95,11 @@ function getPeriodStartDate(date: Date, period: string): Date {
   return result;
 }
 
-function getDaysInPeriod(startDate: Date, endDate: Date): number {
-  return Math.ceil(Math.abs(endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+function getDaysInPeriod(startDate: Date, endDate: Date, tz?: string): number {
+  if (!tz) return Math.ceil(Math.abs(endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  const startLocal = new Date(startDate.toLocaleString('en-US', { timeZone: tz }));
+  const endLocal = new Date(endDate.toLocaleString('en-US', { timeZone: tz }));
+  return Math.ceil((endLocal.getTime() - startLocal.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 function calculateTrend(current: number, previous: number): number {
@@ -180,7 +183,17 @@ async function getWeeklyQuantity(db: any, feedId: string, startDate: Date, endDa
       ])
       .toArray();
 
-    return result.slice(-7);
+    // Ensure 7 full weeks
+    const weeks: { week: string; count: number }[] = [];
+    const start = new Date(startDate);
+    for (let i = 0; i < 7; i++) {
+      const weekStart = new Date(start);
+      weekStart.setDate(start.getDate() + i * 7);
+      const weekStr = weekStart.toISOString().split('T')[0];
+      const found = result.find(r => r.week === weekStr);
+      weeks.push({ week: weekStr, count: found ? found.count : 0 });
+    }
+    return weeks;
   } catch (error) {
     console.error(`Error getting weekly quantity for feed ${feedId}:`, error);
     return [];
@@ -193,10 +206,12 @@ async function getDowHourHeatmap(db: any, feedId: string, startDate: Date, endDa
       .collection('post')
       .aggregate([
         { $match: { algoTags: feedId, indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() } } },
-        { $addFields: {
+        {
+          $addFields: {
             hour: tz ? { $hour: { date: { $toDate: '$indexedAt' }, timezone: tz } } : { $hour: { $toDate: '$indexedAt' } },
-            dow: tz ? { $dayOfWeek: { date: { $toDate: '$indexedAt' }, timezone: tz } } : { $dayOfWeek: { $toDate: '$indexedAt' } }
-        } },
+            dow: tz ? { $dayOfWeek: { date: { $toDate: '$indexedAt' }, timezone: tz } } : { $dayOfWeek: { $toDate: '$indexedAt' } },
+          },
+        },
         { $group: { _id: { dow: '$dow', hour: '$hour' }, count: { $sum: 1 } } },
         { $project: { _id: 0, dow: '$_id.dow', hour: '$_id.hour', count: 1 } },
       ])

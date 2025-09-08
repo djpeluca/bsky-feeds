@@ -35,21 +35,18 @@ export const createLandingPageRouter = (ctx: AppContext) => {
 
   router.get('/', async (req, res) => {
     try {
+      // Exclude "external" / "penarol"
       let feedAlgos = Object.keys(algos)
-        .filter(key => key !== 'external')
+        .filter(key => key !== 'external' && key !== 'penarol')
         .map(key => ({
           name: key,
           displayName: key.charAt(0).toUpperCase() + key.slice(1),
         }));
 
-      // Apply display name fixes
-      feedAlgos = feedAlgos.map(f => {
-        if (f.name === 'ai') f.displayName = 'AI';
-        return f;
-      });
+      // Display name fixes
+      feedAlgos = feedAlgos.map(f => f.name === 'ai' ? { ...f, displayName: 'AI' } : f);
 
-      // Split blocks
-      const regionalOrder = ['uruguay','argentina','brasil','riodelaplata','penarol'];
+      const regionalOrder = ['uruguay','argentina','brasil','riodelaplata'];
       const techOrder = ['fediverse','ai','salesforce'];
 
       const regionalFeeds = feedAlgos
@@ -60,10 +57,9 @@ export const createLandingPageRouter = (ctx: AppContext) => {
         .filter(f => techOrder.includes(f.name))
         .sort((a,b) => techOrder.indexOf(a.name) - techOrder.indexOf(b.name));
 
-      // Combine blocks
       const orderedFeeds = [...regionalFeeds, ...techFeeds];
 
-      res.send(generateLandingPageHTML(orderedFeeds, regionalFeeds.map(f=>f.name)));
+      res.send(generateLandingPageHTML(orderedFeeds, regionalFeeds.map(f => f.name)));
     } catch (error) {
       console.error('Error rendering landing page:', error);
       res.status(500).send('Internal Server Error');
@@ -104,10 +100,9 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
 
 .heatmap { display: flex; flex-direction: column; gap:2px; flex:1; }
 .heatmap-row { display: flex; width: 100%; }
-.heatmap-cell { flex:1; aspect-ratio: 1 / 1; } /* cells scale to fit full width */
+.heatmap-cell { flex:1; aspect-ratio: 1 / 1; }
 .loading { color: gray; }
 .error { color: red; }
-
 </style>
 </head>
 <body>
@@ -115,8 +110,8 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
 <div class="container">
   <div class="dashboard">
     <div class="block-title">Regional Feeds</div>
-    ${feeds.filter(f=>GMT3_FEEDS.includes(f.name)).map(feed => `
-      <div class="card" id="${feed.name}-card" data-tz="${GMT3_FEEDS.includes(feed.name)?'gmt-3':'utc'}">
+    ${feeds.filter(f => GMT3_FEEDS.includes(f.name)).map(feed => `
+      <div class="card" id="${feed.name}-card" data-tz="gmt-3">
         <h2>${feed.displayName}</h2>
         <div class="stats" id="${feed.name}-stats"><div class="loading">Loading analytics...</div></div>
         <div class="chart-container"><canvas id="${feed.name}-weeklyChart"></canvas></div>
@@ -129,7 +124,7 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
     `).join('')}
 
     <div class="block-title">Tech Feeds</div>
-    ${feeds.filter(f=>!GMT3_FEEDS.includes(f.name)).map(feed => `
+    ${feeds.filter(f => !GMT3_FEEDS.includes(f.name)).map(feed => `
       <div class="card" id="${feed.name}-card" data-tz="utc">
         <h2>${feed.displayName}</h2>
         <div class="stats" id="${feed.name}-stats"><div class="loading">Loading analytics...</div></div>
@@ -186,9 +181,9 @@ function updateFeedCard(feedId, data){
     </div>
   \`;
 
-  // Weekly bar chart
   if(data.weeklyQuantity){
-    const ctx=document.getElementById(\`\${feedId}-weeklyChart\`).getContext('2d');
+    const ctx = document.getElementById(\`\${feedId}-weeklyChart\`).getContext('2d');
+    if (Chart.getChart(ctx)) Chart.getChart(ctx).destroy();
     new Chart(ctx,{ type:'bar',
       data:{ labels:data.weeklyQuantity.map(d=>d.week), 
              datasets:[{label:'Posts per Day', data:data.weeklyQuantity.map(d=>d.count),
@@ -197,15 +192,14 @@ function updateFeedCard(feedId, data){
     });
   }
 
-  // Heatmap (backend already returns in proper timezone)
-  const heatmapEl=document.getElementById(\`\${feedId}-heatmap\`);
-  const labelEl=document.getElementById(\`\${feedId}-heatmap-labels\`);
+  const heatmapEl = document.getElementById(\`\${feedId}-heatmap\`);
+  const labelEl = document.getElementById(\`\${feedId}-heatmap-labels\`);
   if(data.dowHourHeatmap){
     const maxCount = Math.max(...data.dowHourHeatmap.map(c=>c.count));
     const dowLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-    heatmapEl.innerHTML='';
-    labelEl.innerHTML='';
+    heatmapEl.innerHTML = '';
+    labelEl.innerHTML = '';
 
     for(let d=1; d<=7; d++){
       const labelDiv = document.createElement('div');
@@ -232,7 +226,7 @@ function updateFeedCard(feedId, data){
 }
 
 async function initDashboard(){
-  const feeds=${JSON.stringify(feeds)};
+  const feeds = ${JSON.stringify(feeds)};
   for(const feed of feeds){
     fetchAnalytics(feed.name).then(data => updateFeedCard(feed.name, data));
   }
