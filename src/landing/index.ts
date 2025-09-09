@@ -210,7 +210,7 @@ function updateFeedCard(feedId, data){
   const labelEl = document.getElementById(\`\${feedId}-heatmap-labels\`);
   if(data.dowHourHeatmap){
     const maxCount = Math.max(...data.dowHourHeatmap.map(c=>c.count));
-    const dowLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const dowLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
     heatmapEl.innerHTML = '';
     labelEl.innerHTML = '';

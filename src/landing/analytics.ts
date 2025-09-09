@@ -35,8 +35,14 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   const tz = GMT3_FEEDS.includes(feedId) ? 'America/Montevideo' : 'UTC';
   const now = new Date();
 
-  const periodStart = getPeriodStartDate(now, period, tz);
-  const previousPeriodStart = getPeriodStartDate(periodStart, period, tz);
+  // --- Define period: last 7 days (including today) ---
+  const periodStart = new Date();
+  periodStart.setDate(now.getDate() - 6);
+  periodStart.setHours(0, 0, 0, 0);
+
+  const previousPeriodStart = new Date();
+  previousPeriodStart.setDate(periodStart.getDate() - 7);
+  previousPeriodStart.setHours(0, 0, 0, 0);
 
   const postCount = await getPostCountForFeed(db, feedId, periodStart, now);
   const previousPostCount = await getPostCountForFeed(db, feedId, previousPeriodStart, periodStart);
@@ -44,8 +50,8 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   const uniqueAuthors = await getUniqueAuthorsForFeed(db, feedId, periodStart, now);
   const previousUniqueAuthors = await getUniqueAuthorsForFeed(db, feedId, previousPeriodStart, periodStart);
 
-  const daysInPeriod = getDaysInPeriod(periodStart, now, tz);
-  const daysInPreviousPeriod = getDaysInPeriod(previousPeriodStart, periodStart, tz);
+  const daysInPeriod = getDaysInPeriod(periodStart, now);
+  const daysInPreviousPeriod = getDaysInPeriod(previousPeriodStart, periodStart);
 
   const avgPostsPerDay = daysInPeriod > 0 ? postCount / daysInPeriod : 0;
   const previousAvgPostsPerDay = daysInPreviousPeriod > 0 ? previousPostCount / daysInPreviousPeriod : 0;
@@ -56,7 +62,7 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
 
   const timeDistribution = await getTimeDistribution(db, feedId, periodStart, now, tz);
   const dailyQuantity = await getDailyQuantity(db, feedId, tz);
-  const dowHourHeatmap = await getDowHourHeatmap(db, feedId, periodStart, now, tz);
+  const dowHourHeatmap = await getDowHourHeatmap(db, feedId, tz);
 
   const analyticsData: FeedAnalytics = {
     feedId,
@@ -77,32 +83,8 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
 
 // --- Helper functions ---
 
-function getPeriodStartDate(date: Date, period: string, tz: string): Date {
-  const localDate = new Date(date.toLocaleString('en-US', { timeZone: tz }));
-  switch (period) {
-    case 'day':
-      localDate.setHours(0, 0, 0, 0);
-      localDate.setDate(localDate.getDate() - 1);
-      break;
-    case 'week':
-      localDate.setHours(0, 0, 0, 0);
-      localDate.setDate(localDate.getDate() - 7);
-      break;
-    case 'month':
-      localDate.setHours(0, 0, 0, 0);
-      localDate.setMonth(localDate.getMonth() - 1);
-      break;
-    default:
-      localDate.setHours(0, 0, 0, 0);
-      localDate.setDate(localDate.getDate() - 7);
-  }
-  return localDate;
-}
-
-function getDaysInPeriod(startDate: Date, endDate: Date, tz: string): number {
-  const startLocal = new Date(startDate.toLocaleString('en-US', { timeZone: tz }));
-  const endLocal = new Date(endDate.toLocaleString('en-US', { timeZone: tz }));
-  return Math.ceil((endLocal.getTime() - startLocal.getTime()) / (1000 * 60 * 60 * 24));
+function getDaysInPeriod(startDate: Date, endDate: Date): number {
+  return Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 function calculateTrend(current: number, previous: number): number {
@@ -151,11 +133,7 @@ async function getTimeDistribution(db: any, feedId: string, startDate: Date, end
       .collection('post')
       .aggregate([
         { $match: { algoTags: feedId, indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() } } },
-        {
-          $addFields: {
-            hour: { $hour: { date: { $toDate: '$indexedAt' }, timezone: tz } },
-          },
-        },
+        { $addFields: { hour: { $hour: { date: { $toDate: '$indexedAt' }, timezone: tz } } } },
         { $group: { _id: '$hour', count: { $sum: 1 } } },
         { $project: { _id: 0, hour: '$_id', count: 1 } },
         { $sort: { hour: 1 } },
@@ -175,13 +153,10 @@ async function getTimeDistribution(db: any, feedId: string, startDate: Date, end
 async function getDailyQuantity(db: any, feedId: string, tz: string) {
   try {
     const now = new Date();
-
-    const todayStr = now.toLocaleDateString('en-CA', { timeZone: tz });
-
     const dayStrs: string[] = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now);
-      d.setDate(d.getDate() - i);
+      d.setDate(now.getDate() - i);
       dayStrs.push(d.toLocaleDateString('en-CA', { timeZone: tz }));
     }
 
@@ -220,16 +195,28 @@ async function getDailyQuantity(db: any, feedId: string, tz: string) {
   }
 }
 
-async function getDowHourHeatmap(db: any, feedId: string, startDate: Date, endDate: Date, tz: string) {
+async function getDowHourHeatmap(db: any, feedId: string, tz: string) {
   try {
+    const now = new Date();
+    const startDate = new Date();
+    startDate.setDate(now.getDate() - 6);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999);
+
     const raw = await db
       .collection('post')
       .aggregate([
-        { $match: { algoTags: feedId, indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() } } },
+        {
+          $match: {
+            algoTags: feedId,
+            indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() },
+          },
+        },
         {
           $addFields: {
             hour: { $hour: { date: { $toDate: '$indexedAt' }, timezone: tz } },
-            dow: { $dayOfWeek: { date: { $toDate: '$indexedAt' }, timezone: tz } },
+            dow: { $isoDayOfWeek: { date: { $toDate: '$indexedAt' }, timezone: tz } },
           },
         },
         { $group: { _id: { dow: '$dow', hour: '$hour' }, count: { $sum: 1 } } },
@@ -241,7 +228,9 @@ async function getDowHourHeatmap(db: any, feedId: string, startDate: Date, endDa
     for (const r of raw) map.set(`${r.dow}-${r.hour}`, r.count);
 
     const out: { dow: number; hour: number; count: number }[] = [];
-    for (let d = 1; d <= 7; d++) for (let h = 0; h < 24; h++) out.push({ dow: d, hour: h, count: map.get(`${d}-${h}`) ?? 0 });
+    for (let d = 1; d <= 7; d++)
+      for (let h = 0; h < 24; h++)
+        out.push({ dow: d, hour: h, count: map.get(`${d}-${h}`) ?? 0 });
 
     return out;
   } catch (error) {
