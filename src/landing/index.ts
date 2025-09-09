@@ -161,6 +161,15 @@ function renderTrend(val){
   return '<span>'+val+'%</span>';
 }
 
+// Color gradient helper (gray -> yellow -> red)
+function getHeatmapColor(intensity){
+  if(intensity === 0) return 'rgb(230,230,230)'; // light gray for empty
+  const r = Math.min(255, Math.floor(intensity * 255));
+  const g = Math.min(255, Math.floor(200 - intensity * 200)); // fades to 0
+  const b = 0;
+  return \`rgb(\${r},\${g},\${b})\`;
+}
+
 function updateFeedCard(feedId, data){
   const stats = document.getElementById(\`\${feedId}-stats\`);
   if(!data){ stats.innerHTML='<div class="error">Failed to load analytics</div>'; return; }
@@ -204,9 +213,9 @@ function updateFeedCard(feedId, data){
 
   const heatmapEl = document.getElementById(\`\${feedId}-heatmap\`);
   const labelEl = document.getElementById(\`\${feedId}-heatmap-labels\`);
-  if(data.dowHourHeatmap){
+  if(data.dowHourHeatmap && data.dowHourHeatmap.length > 0){
     const maxCount = Math.max(...data.dowHourHeatmap.map(c=>c.count));
-    const dowLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']; // match backend dow numbering Sunday=1
+    const dowLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']; 
 
     heatmapEl.innerHTML = '';
     labelEl.innerHTML = '';
@@ -222,8 +231,8 @@ function updateFeedCard(feedId, data){
       for(let h=0; h<24; h++){
         const cell = data.dowHourHeatmap.find(c => c.dow === d && c.hour === h);
         const count = cell ? cell.count : 0;
-        const intensity = maxCount>0 ? Math.round((count/maxCount)*255) : 0;
-        const color = 'rgb('+intensity+',0,'+(255-intensity)+')';
+        const ratio = maxCount > 0 ? count / maxCount : 0;
+        const color = getHeatmapColor(ratio);
 
         const cellDiv = document.createElement('div');
         cellDiv.className='heatmap-cell';
