@@ -34,6 +34,7 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   if (!algos[feedId]) throw new Error(`Feed ${feedId} not found`);
 
   const tzOffsetHours = GMT3_FEEDS.includes(feedId) ? -3 : 0; // offset from UTC in hours
+  const tzString = GMT3_FEEDS.includes(feedId) ? 'America/Montevideo' : 'UTC';
 
   const now = new Date();
   const periodStart = getPeriodStartDate(now, period);
@@ -62,7 +63,7 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
 
   const timeDistribution = await getTimeDistribution(db, feedId, periodStartMs, nowMsUtc, tzOffsetHours);
   const dailyQuantity = await getDailyQuantity(db, feedId, periodStart, now, tzOffsetHours);
-  const dowHourHeatmap = await getDowHourHeatmap(db, feedId, periodStartMs, nowMsUtc, tzOffsetHours);
+  const dowHourHeatmap = await getDowHourHeatmap(db, feedId, periodStartMs, nowMsUtc, tzString);
 
   const analyticsData: FeedAnalytics = {
     feedId,
@@ -233,7 +234,7 @@ async function getDailyQuantity(db: any, feedId: string, startDate: Date, endDat
   }
 }
 
-async function getDowHourHeatmap(db: any, feedId: string, startDateMs: number, endDateMs: number, tzOffsetHours: number) {
+async function getDowHourHeatmap(db: any, feedId: string, startDateMs: number, endDateMs: number, tz: string) {
   try {
     const raw = await db
       .collection('post')
@@ -241,13 +242,8 @@ async function getDowHourHeatmap(db: any, feedId: string, startDateMs: number, e
         { $match: { algoTags: feedId, indexedAt: { $gte: startDateMs, $lte: endDateMs } } },
         {
           $addFields: {
-            dow: { $dayOfWeek: { date: { $toDate: '$indexedAt' } } },
-            hour: {
-              $mod: [
-                { $add: [{ $hour: { date: { $toDate: '$indexedAt' } } }, tzOffsetHours] },
-                24,
-              ],
-            },
+            dow: { $dayOfWeek: { date: { $toDate: '$indexedAt' }, timezone: tz } },
+            hour: { $hour: { date: { $toDate: '$indexedAt' }, timezone: tz } },
           },
         },
         { $group: { _id: { dow: '$dow', hour: '$hour' }, count: { $sum: 1 } } },
