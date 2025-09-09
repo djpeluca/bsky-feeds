@@ -35,7 +35,6 @@ export const createLandingPageRouter = (ctx: AppContext) => {
 
   router.get('/', async (req, res) => {
     try {
-      // Exclude "external" / "penarol"
       let feedAlgos = Object.keys(algos)
         .filter(key => key !== 'external' && key !== 'penarol')
         .map(key => ({
@@ -43,7 +42,6 @@ export const createLandingPageRouter = (ctx: AppContext) => {
           displayName: key.charAt(0).toUpperCase() + key.slice(1),
         }));
 
-      // Display name fixes
       feedAlgos = feedAlgos.map(f => f.name === 'ai' ? { ...f, displayName: 'AI' } : f);
 
       const regionalOrder = ['uruguay','argentina','brasil','riodelaplata'];
@@ -86,20 +84,20 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
 .dashboard { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: flex-start; }
 .block-title { width: 100%; font-size: 1.2rem; margin-top: 2rem; margin-bottom: 0.5rem; font-weight: bold; }
 
-/* Original working cards layout */
+/* Fixed width cards, 2 per row max */
 .card { 
   background: white; 
   padding: 1rem; 
   border-radius: 8px; 
-  flex: 1 1 auto; /* let them size naturally */
-  min-width: 300px; /* ensures cards don’t get too small */
+  width: 400px; 
   box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+  flex: 0 0 auto; /* do not shrink */
 }
 
 /* Mobile: full width cards */
-@media(max-width: 900px) {
+@media(max-width: 850px) {
   .card {
-    flex: 1 1 100%;
+    width: 100%;
   }
 }
 
