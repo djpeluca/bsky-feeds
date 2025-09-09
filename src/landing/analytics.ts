@@ -33,18 +33,18 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   if (!algos[feedId]) throw new Error(`Feed ${feedId} not found`);
 
   const tz = GMT3_FEEDS.includes(feedId) ? 'America/Montevideo' : 'UTC';
+  const now = new Date();
 
-  const periodStart = getPeriodStartDate(new Date(), period, tz);
-  const periodEnd = getPeriodEndDate(tz);
+  const periodStart = getPeriodStartDate(now, period, tz);
   const previousPeriodStart = getPeriodStartDate(periodStart, period, tz);
 
-  const postCount = await getPostCountForFeed(db, feedId, periodStart, periodEnd);
+  const postCount = await getPostCountForFeed(db, feedId, periodStart, now);
   const previousPostCount = await getPostCountForFeed(db, feedId, previousPeriodStart, periodStart);
 
-  const uniqueAuthors = await getUniqueAuthorsForFeed(db, feedId, periodStart, periodEnd);
+  const uniqueAuthors = await getUniqueAuthorsForFeed(db, feedId, periodStart, now);
   const previousUniqueAuthors = await getUniqueAuthorsForFeed(db, feedId, previousPeriodStart, periodStart);
 
-  const daysInPeriod = getDaysInPeriod(periodStart, periodEnd, tz);
+  const daysInPeriod = getDaysInPeriod(periodStart, now, tz);
   const daysInPreviousPeriod = getDaysInPeriod(previousPeriodStart, periodStart, tz);
 
   const avgPostsPerDay = daysInPeriod > 0 ? postCount / daysInPeriod : 0;
@@ -54,9 +54,9 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   const uniqueAuthorsTrend = calculateTrend(uniqueAuthors, previousUniqueAuthors);
   const avgPostsPerDayTrend = calculateTrend(avgPostsPerDay, previousAvgPostsPerDay);
 
-  const timeDistribution = await getTimeDistribution(db, feedId, periodStart, periodEnd, tz);
+  const timeDistribution = await getTimeDistribution(db, feedId, periodStart, now, tz);
   const dailyQuantity = await getDailyQuantity(db, feedId, tz);
-  const dowHourHeatmap = await getDowHourHeatmap(db, feedId, periodStart, periodEnd, tz);
+  const dowHourHeatmap = await getDowHourHeatmap(db, feedId, tz);
 
   const analyticsData: FeedAnalytics = {
     feedId,
@@ -97,15 +97,10 @@ function getPeriodStartDate(date: Date, period: string, tz: string): Date {
   return localDate;
 }
 
-function getPeriodEndDate(tz: string): Date {
-  return new Date(new Date().toLocaleString('en-US', { timeZone: tz, hour12: false }));
-}
-
 function getDaysInPeriod(startDate: Date, endDate: Date, tz: string): number {
   const startLocal = new Date(startDate.toLocaleString('en-US', { timeZone: tz }));
   const endLocal = new Date(endDate.toLocaleString('en-US', { timeZone: tz }));
-  const diffMs = endLocal.getTime() - startLocal.getTime();
-  return Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)));
+  return Math.ceil((endLocal.getTime() - startLocal.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 function calculateTrend(current: number, previous: number): number {
@@ -177,28 +172,20 @@ async function getDailyQuantity(db: any, feedId: string, tz: string) {
     const dayStrs: string[] = [];
 
     for (let i = 6; i >= 0; i--) {
-      const d = new Date(now.toLocaleString('en-US', { timeZone: tz }));
+      const d = new Date(now);
       d.setDate(d.getDate() - i);
-      dayStrs.push(d.toLocaleDateString('en-CA', { timeZone: tz }));
+      const localDayStr = d.toLocaleDateString('en-CA', { timeZone: tz });
+      dayStrs.push(localDayStr);
     }
+
+    const startDateLocal = new Date(new Date(dayStrs[0] + 'T00:00:00').toLocaleString('en-US', { timeZone: tz }));
+    const endDateLocal = new Date(new Date(dayStrs[dayStrs.length - 1] + 'T23:59:59.999').toLocaleString('en-US', { timeZone: tz }));
 
     const result = await db
       .collection('post')
       .aggregate([
-        {
-          $match: {
-            algoTags: feedId,
-            indexedAt: {
-              $gte: new Date(`${dayStrs[0]}T00:00:00`).getTime(),
-              $lte: new Date(`${dayStrs[dayStrs.length - 1]}T23:59:59.999`).getTime(),
-            },
-          },
-        },
-        {
-          $addFields: {
-            day: { $dateToString: { format: '%Y-%m-%d', date: { $toDate: '$indexedAt' }, timezone: tz } },
-          },
-        },
+        { $match: { algoTags: feedId, indexedAt: { $gte: startDateLocal.getTime(), $lte: endDateLocal.getTime() } } },
+        { $addFields: { day: { $dateToString: { format: '%Y-%m-%d', date: { $toDate: '$indexedAt' }, timezone: tz } } } },
         { $group: { _id: '$day', count: { $sum: 1 } } },
         { $project: { _id: 0, day: '$_id', count: 1 } },
         { $sort: { day: 1 } },
@@ -215,34 +202,54 @@ async function getDailyQuantity(db: any, feedId: string, tz: string) {
   }
 }
 
-async function getDowHourHeatmap(db: any, feedId: string, startDate: Date, endDate: Date, tz: string) {
+// --- Corrected Heatmap: uses daily string as canonical date ---
+async function getDowHourHeatmap(db: any, feedId: string, tz: string) {
   try {
+    const now = new Date();
+    const startDate = new Date(now);
+    startDate.setDate(startDate.getDate() - 6);
+    startDate.setHours(0, 0, 0, 0);
+
     const raw = await db
       .collection('post')
       .aggregate([
-        { $match: { algoTags: feedId, indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() } } },
+        { $match: { algoTags: feedId, indexedAt: { $gte: startDate.getTime(), $lte: now.getTime() } } },
         {
           $addFields: {
+            day: { $dateToString: { format: '%Y-%m-%d', date: { $toDate: '$indexedAt' }, timezone: tz } },
             hour: { $hour: { date: { $toDate: '$indexedAt' }, timezone: tz } },
-            dow: { $dayOfWeek: { date: { $toDate: '$indexedAt' }, timezone: tz } },
           },
         },
-        { $group: { _id: { dow: '$dow', hour: '$hour' }, count: { $sum: 1 } } },
-        { $project: { _id: 0, dow: '$_id.dow', hour: '$_id.hour', count: 1 } },
+        { $group: { _id: { day: '$day', hour: '$hour' }, count: { $sum: 1 } } },
+        { $project: { _id: 0, day: '$_id.day', hour: '$_id.hour', count: 1 } },
+        { $sort: { day: 1, hour: 1 } },
       ])
       .toArray();
 
-    const map = new Map<string, number>();
-    for (const r of raw) {
-      // normalize Sunday=7, Monday=1, etc.
-      const dowMonFirst = r.dow === 1 ? 7 : r.dow - 1;
-      map.set(`${dowMonFirst}-${r.hour}`, r.count);
+    // Map day string to dow (Monday=1,...Sunday=7)
+    const dowMap: Record<string, number> = {};
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(startDate);
+      d.setDate(d.getDate() + i);
+      const dayStr = d.toLocaleDateString('en-CA', { timeZone: tz });
+      const dow = ((d.getDay() + 6) % 7) + 1; // Monday=1
+      dowMap[dayStr] = dow;
     }
 
-    const out: { dow: number; hour: number; count: number }[] = [];
-    for (let d = 1; d <= 7; d++) for (let h = 0; h < 24; h++) out.push({ dow: d, hour: h, count: map.get(`${d}-${h}`) ?? 0 });
+    const heatmap: { dow: number; hour: number; count: number }[] = [];
+    for (const dayHour of raw) {
+      const dow = dowMap[dayHour.day] ?? 0;
+      if (dow) heatmap.push({ dow, hour: dayHour.hour, count: dayHour.count });
+    }
 
-    return out;
+    // fill missing hours/days with 0
+    const fullHeatmap: { dow: number; hour: number; count: number }[] = [];
+    for (let d = 1; d <= 7; d++) for (let h = 0; h < 24; h++) {
+      const found = heatmap.find((v) => v.dow === d && v.hour === h);
+      fullHeatmap.push({ dow: d, hour: h, count: found ? found.count : 0 });
+    }
+
+    return fullHeatmap;
   } catch (error) {
     console.error(`Error getting DOW×Hour heatmap for feed ${feedId}:`, error);
     const out: { dow: number; hour: number; count: number }[] = [];
