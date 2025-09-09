@@ -79,26 +79,24 @@ function generateLandingPageHTML(feeds: { name: string; displayName: string }[],
 <style>
 body { font-family: Arial; margin: 0; background: #f4f4f4; }
 header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
-.container { max-width: 1400px; margin: auto; padding: 1rem; }
 
-.dashboard { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: flex-start; }
+.container { max-width: 1200px; margin: auto; padding: 1rem; }
+.dashboard { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; }
 .block-title { width: 100%; font-size: 1.2rem; margin-top: 2rem; margin-bottom: 0.5rem; font-weight: bold; }
 
-/* Fixed width cards, 2 per row max */
+/* Fixed width cards, max two per row */
 .card { 
   background: white; 
   padding: 1rem; 
   border-radius: 8px; 
-  width: 400px; 
+  width: 550px; 
   box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
-  flex: 0 0 auto; /* do not shrink */
+  flex: 0 0 auto;
 }
 
 /* Mobile: full width cards */
-@media(max-width: 850px) {
-  .card {
-    width: 100%;
-  }
+@media(max-width: 1150px) {
+  .card { width: 100%; }
 }
 
 .chart-container { height: 250px; }
