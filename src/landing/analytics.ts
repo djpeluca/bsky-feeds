@@ -20,12 +20,6 @@ const CACHE_TTL_MS = 1000 * 60 * 60; // 1 hour
 
 // Feeds that should use GMT-3
 const GMT3_FEEDS = ['uruguay', 'argentina', 'riodelaplata', 'brasil'];
-const FEED_TIMEZONES: Record<string, string> = {
-  uruguay: 'America/Montevideo',
-  argentina: 'America/Argentina/Buenos_Aires',
-  riodelaplata: 'America/Montevideo',
-  brasil: 'America/Sao_Paulo',
-};
 
 export async function getFeedAnalytics(feedId: string, period: string = 'week'): Promise<FeedAnalytics> {
   const nowMs = Date.now();
@@ -39,17 +33,22 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   if (!db) throw new Error('Database client not initialized');
   if (!algos[feedId]) throw new Error(`Feed ${feedId} not found`);
 
-  const tz = FEED_TIMEZONES[feedId] || 'UTC';
+  const tzOffsetHours = GMT3_FEEDS.includes(feedId) ? -3 : 0;
 
   const now = new Date();
   const periodStart = getPeriodStartDate(now, period);
   const previousPeriodStart = getPreviousPeriodStart(periodStart, period);
 
-  const postCount = await getPostCountForFeed(db, feedId, periodStart, now);
-  const previousPostCount = await getPostCountForFeed(db, feedId, previousPeriodStart, periodStart);
+  // convert to UTC millis considering timezone offset
+  const periodStartMs = periodStart.getTime() - tzOffsetHours * 3600 * 1000;
+  const nowMsUtc = now.getTime() - tzOffsetHours * 3600 * 1000;
+  const previousPeriodStartMs = previousPeriodStart.getTime() - tzOffsetHours * 3600 * 1000;
 
-  const uniqueAuthors = await getUniqueAuthorsForFeed(db, feedId, periodStart, now);
-  const previousUniqueAuthors = await getUniqueAuthorsForFeed(db, feedId, previousPeriodStart, periodStart);
+  const postCount = await getPostCountForFeed(db, feedId, periodStartMs, nowMsUtc);
+  const previousPostCount = await getPostCountForFeed(db, feedId, previousPeriodStartMs, periodStartMs);
+
+  const uniqueAuthors = await getUniqueAuthorsForFeed(db, feedId, periodStartMs, nowMsUtc);
+  const previousUniqueAuthors = await getUniqueAuthorsForFeed(db, feedId, previousPeriodStartMs, periodStartMs);
 
   const daysInPeriod = getDaysInPeriod(periodStart, now);
   const daysInPreviousPeriod = getDaysInPeriod(previousPeriodStart, periodStart);
@@ -61,9 +60,9 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   const uniqueAuthorsTrend = uniqueAuthors - previousUniqueAuthors;
   const avgPostsPerDayTrend = avgPostsPerDay - previousAvgPostsPerDay;
 
-  const timeDistribution = await getTimeDistribution(db, feedId, periodStart, now, tz);
-  const dailyQuantity = await getDailyQuantity(db, feedId, periodStart, now, tz);
-  const dowHourHeatmap = await getDowHourHeatmap(db, feedId, periodStart, now, tz);
+  const timeDistribution = await getTimeDistribution(db, feedId, periodStartMs, nowMsUtc, tzOffsetHours);
+  const dailyQuantity = await getDailyQuantity(db, feedId, periodStart, now, tzOffsetHours);
+  const dowHourHeatmap = await getDowHourHeatmap(db, feedId, periodStart, now, tzOffsetHours);
 
   const analyticsData: FeedAnalytics = {
     feedId,
@@ -136,11 +135,11 @@ export function getAvailableFeeds() {
 
 // --- Database queries (Mongo) ---
 
-async function getPostCountForFeed(db: any, feedId: string, startDate: Date, endDate: Date): Promise<number> {
+async function getPostCountForFeed(db: any, feedId: string, startDateMs: number, endDateMs: number): Promise<number> {
   try {
     return await db.collection('post').countDocuments({
       algoTags: feedId,
-      indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() },
+      indexedAt: { $gte: startDateMs, $lte: endDateMs },
     });
   } catch (error) {
     console.error(`Error getting post count for feed ${feedId}:`, error);
@@ -148,11 +147,11 @@ async function getPostCountForFeed(db: any, feedId: string, startDate: Date, end
   }
 }
 
-async function getUniqueAuthorsForFeed(db: any, feedId: string, startDate: Date, endDate: Date): Promise<number> {
+async function getUniqueAuthorsForFeed(db: any, feedId: string, startDateMs: number, endDateMs: number): Promise<number> {
   try {
     const authors = await db.collection('post').distinct('author', {
       algoTags: feedId,
-      indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() },
+      indexedAt: { $gte: startDateMs, $lte: endDateMs },
     });
     return authors.length;
   } catch (error) {
@@ -161,15 +160,20 @@ async function getUniqueAuthorsForFeed(db: any, feedId: string, startDate: Date,
   }
 }
 
-async function getTimeDistribution(db: any, feedId: string, startDate: Date, endDate: Date, tz: string) {
+async function getTimeDistribution(db: any, feedId: string, startDateMs: number, endDateMs: number, tzOffsetHours: number) {
   try {
     const result = await db
       .collection('post')
       .aggregate([
-        { $match: { algoTags: feedId, indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() } } },
+        { $match: { algoTags: feedId, indexedAt: { $gte: startDateMs, $lte: endDateMs } } },
         {
           $addFields: {
-            hour: { $hour: { date: { $toDate: '$indexedAt' }, timezone: tz } },
+            hour: {
+              $mod: [
+                { $add: [{ $hour: { date: { $toDate: '$indexedAt' } } }, tzOffsetHours] },
+                24,
+              ],
+            },
           },
         },
         { $group: { _id: '$hour', count: { $sum: 1 } } },
@@ -188,17 +192,29 @@ async function getTimeDistribution(db: any, feedId: string, startDate: Date, end
   }
 }
 
-async function getDailyQuantity(db: any, feedId: string, startDate: Date, endDate: Date, tz: string) {
+async function getDailyQuantity(db: any, feedId: string, startDate: Date, endDate: Date, tzOffsetHours: number) {
   try {
     const result = await db
       .collection('post')
       .aggregate([
         {
-          $match: { algoTags: feedId, indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() } },
+          $match: {
+            algoTags: feedId,
+            indexedAt: {
+              $gte: startDate.getTime() - tzOffsetHours * 3600 * 1000,
+              $lte: endDate.getTime() - tzOffsetHours * 3600 * 1000,
+            },
+          },
         },
         {
           $addFields: {
-            day: { $dateToString: { format: '%Y-%m-%d', date: { $toDate: '$indexedAt' }, timezone: tz } },
+            day: {
+              $dateToString: {
+                format: '%Y-%m-%d',
+                date: { $toDate: '$indexedAt' },
+                timezone: 'UTC',
+              },
+            },
           },
         },
         { $group: { _id: '$day', count: { $sum: 1 } } },
@@ -210,7 +226,8 @@ async function getDailyQuantity(db: any, feedId: string, startDate: Date, endDat
     const days: string[] = [];
     const cursor = new Date(startDate);
     while (cursor <= endDate) {
-      days.push(cursor.toISOString().slice(0, 10));
+      const dayStr = cursor.toISOString().slice(0, 10);
+      days.push(dayStr);
       cursor.setDate(cursor.getDate() + 1);
     }
 
@@ -224,18 +241,22 @@ async function getDailyQuantity(db: any, feedId: string, startDate: Date, endDat
   }
 }
 
-async function getDowHourHeatmap(db: any, feedId: string, startDate: Date, endDate: Date, tz: string) {
+/**
+ * Heatmap now sums posts for the same day of week across the period
+ */
+async function getDowHourHeatmap(db: any, feedId: string, periodStart: Date, periodEnd: Date, tzOffsetHours: number) {
   try {
+    const startMs = periodStart.getTime() - tzOffsetHours * 3600 * 1000;
+    const endMs = periodEnd.getTime() - tzOffsetHours * 3600 * 1000;
+
     const raw = await db
       .collection('post')
       .aggregate([
-        {
-          $match: { algoTags: feedId, indexedAt: { $gte: startDate.getTime(), $lte: endDate.getTime() } },
-        },
+        { $match: { algoTags: feedId, indexedAt: { $gte: startMs, $lte: endMs } } },
         {
           $addFields: {
-            dow: { $dayOfWeek: { date: { $toDate: '$indexedAt' }, timezone: tz } },
-            hour: { $hour: { date: { $toDate: '$indexedAt' }, timezone: tz } },
+            dow: { $dayOfWeek: { date: { $toDate: '$indexedAt' } } }, // Sunday=1
+            hour: { $mod: [{ $add: [{ $hour: { date: { $toDate: '$indexedAt' } } }, tzOffsetHours] }, 24] },
           },
         },
         { $group: { _id: { dow: '$dow', hour: '$hour' }, count: { $sum: 1 } } },
@@ -243,14 +264,14 @@ async function getDowHourHeatmap(db: any, feedId: string, startDate: Date, endDa
       ])
       .toArray();
 
+    // build full 7x24 grid summing all posts for each weekday across the period
     const full: { dow: number; hour: number; count: number }[] = [];
-    for (let d = 1; d <= 7; d++) {
+    for (let dow = 1; dow <= 7; dow++) {
       for (let h = 0; h < 24; h++) {
-        const found = raw.find((r) => r.dow === d && r.hour === h);
-        full.push({ dow: d, hour: h, count: found ? found.count : 0 });
+        const found = raw.find((r) => r.dow === dow && r.hour === h);
+        full.push({ dow, hour: h, count: found ? found.count : 0 });
       }
     }
-
     return full;
   } catch (error) {
     console.error(`Error getting DOW×Hour heatmap for feed ${feedId}:`, error);
