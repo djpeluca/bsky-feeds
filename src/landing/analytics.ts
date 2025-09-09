@@ -39,10 +39,11 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   const periodStart = getPeriodStartDate(now, period);
   const previousPeriodStart = getPreviousPeriodStart(periodStart, period);
 
-  // convert to UTC millis considering timezone offset
-  const periodStartMs = periodStart.getTime() - tzOffsetHours * 3600 * 1000;
-  const nowMsUtc = now.getTime() - tzOffsetHours * 3600 * 1000;
-  const previousPeriodStartMs = previousPeriodStart.getTime() - tzOffsetHours * 3600 * 1000;
+  // For database queries, we work with UTC timestamps
+  // The timezone adjustment is handled in the aggregation pipeline
+  const periodStartMs = periodStart.getTime();
+  const nowMsUtc = now.getTime();
+  const previousPeriodStartMs = previousPeriodStart.getTime();
 
   const postCount = await getPostCountForFeed(db, feedId, periodStartMs, nowMsUtc);
   const previousPostCount = await getPostCountForFeed(db, feedId, previousPeriodStartMs, periodStartMs);
@@ -168,12 +169,13 @@ async function getTimeDistribution(db: any, feedId: string, startDateMs: number,
         { $match: { algoTags: feedId, indexedAt: { $gte: startDateMs, $lte: endDateMs } } },
         {
           $addFields: {
-            hour: {
-              $mod: [
-                { $add: [{ $hour: { date: { $toDate: '$indexedAt' } } }, tzOffsetHours] },
-                24,
-              ],
-            },
+            // Convert to local time by adding the timezone offset (for GMT-3, tzOffsetHours is -3, so we add -3 hours)
+            localDate: { $add: [{ $toDate: '$indexedAt' }, { $multiply: [tzOffsetHours, 3600000] }] },
+          },
+        },
+        {
+          $addFields: {
+            hour: { $hour: '$localDate' },
           },
         },
         { $group: { _id: '$hour', count: { $sum: 1 } } },
@@ -201,9 +203,15 @@ async function getDailyQuantity(db: any, feedId: string, startDate: Date, endDat
           $match: {
             algoTags: feedId,
             indexedAt: {
-              $gte: startDate.getTime() - tzOffsetHours * 3600 * 1000,
-              $lte: endDate.getTime() - tzOffsetHours * 3600 * 1000,
+              $gte: startDate.getTime(),
+              $lte: endDate.getTime(),
             },
+          },
+        },
+        {
+          $addFields: {
+            // Convert to local timezone
+            localDate: { $add: [{ $toDate: '$indexedAt' }, { $multiply: [tzOffsetHours, 3600000] }] },
           },
         },
         {
@@ -211,7 +219,7 @@ async function getDailyQuantity(db: any, feedId: string, startDate: Date, endDat
             day: {
               $dateToString: {
                 format: '%Y-%m-%d',
-                date: { $toDate: '$indexedAt' },
+                date: '$localDate',
                 timezone: 'UTC',
               },
             },
@@ -223,9 +231,14 @@ async function getDailyQuantity(db: any, feedId: string, startDate: Date, endDat
       ])
       .toArray();
 
+    // Generate all days in the period using local timezone
     const days: string[] = [];
     const cursor = new Date(startDate);
-    while (cursor <= endDate) {
+    // Apply timezone offset to get local dates
+    cursor.setTime(cursor.getTime() + (tzOffsetHours * 3600000));
+    const localEndDate = new Date(endDate.getTime() + (tzOffsetHours * 3600000));
+    
+    while (cursor <= localEndDate) {
       const dayStr = cursor.toISOString().slice(0, 10);
       days.push(dayStr);
       cursor.setDate(cursor.getDate() + 1);
@@ -243,11 +256,12 @@ async function getDailyQuantity(db: any, feedId: string, startDate: Date, endDat
 
 /**
  * Heatmap now sums posts for the same day of week across the period
+ * Fixed timezone handling and DOW calculation
  */
 async function getDowHourHeatmap(db: any, feedId: string, periodStart: Date, periodEnd: Date, tzOffsetHours: number) {
   try {
-    const startMs = periodStart.getTime() - tzOffsetHours * 3600 * 1000;
-    const endMs = periodEnd.getTime() - tzOffsetHours * 3600 * 1000;
+    const startMs = periodStart.getTime();
+    const endMs = periodEnd.getTime();
 
     const raw = await db
       .collection('post')
@@ -255,8 +269,28 @@ async function getDowHourHeatmap(db: any, feedId: string, periodStart: Date, per
         { $match: { algoTags: feedId, indexedAt: { $gte: startMs, $lte: endMs } } },
         {
           $addFields: {
-            dow: { $dayOfWeek: { date: { $toDate: '$indexedAt' } } }, // Sunday=1
-            hour: { $mod: [{ $add: [{ $hour: { date: { $toDate: '$indexedAt' } } }, tzOffsetHours] }, 24] },
+            // Convert to local timezone first
+            localDate: { $add: [{ $toDate: '$indexedAt' }, { $multiply: [tzOffsetHours, 3600000] }] },
+          },
+        },
+        {
+          $addFields: {
+            // MongoDB $dayOfWeek returns Sunday=1, Monday=2, ..., Saturday=7
+            // Convert to Monday=0, Tuesday=1, ..., Sunday=6 format
+            mongoDow: { $dayOfWeek: '$localDate' },
+            hour: { $hour: '$localDate' },
+          },
+        },
+        {
+          $addFields: {
+            // Convert MongoDB DOW (Sun=1) to standard DOW (Mon=0)
+            dow: {
+              $cond: {
+                if: { $eq: ['$mongoDow', 1] }, // Sunday
+                then: 6, // Convert to 6 (Sunday = last day of week)
+                else: { $subtract: ['$mongoDow', 2] } // Mon=0, Tue=1, etc.
+              }
+            }
           },
         },
         { $group: { _id: { dow: '$dow', hour: '$hour' }, count: { $sum: 1 } } },
@@ -264,9 +298,9 @@ async function getDowHourHeatmap(db: any, feedId: string, periodStart: Date, per
       ])
       .toArray();
 
-    // build full 7x24 grid summing all posts for each weekday across the period
+    // Build full 7x24 grid (dow: 0=Monday, 1=Tuesday, ..., 6=Sunday)
     const full: { dow: number; hour: number; count: number }[] = [];
-    for (let dow = 1; dow <= 7; dow++) {
+    for (let dow = 0; dow < 7; dow++) {
       for (let h = 0; h < 24; h++) {
         const found = raw.find((r) => r.dow === dow && r.hour === h);
         full.push({ dow, hour: h, count: found ? found.count : 0 });
@@ -276,7 +310,7 @@ async function getDowHourHeatmap(db: any, feedId: string, periodStart: Date, per
   } catch (error) {
     console.error(`Error getting DOW×Hour heatmap for feed ${feedId}:`, error);
     const out: { dow: number; hour: number; count: number }[] = [];
-    for (let d = 1; d <= 7; d++) for (let h = 0; h < 24; h++) out.push({ dow: d, hour: h, count: 0 });
+    for (let d = 0; d < 7; d++) for (let h = 0; h < 24; h++) out.push({ dow: d, hour: h, count: 0 });
     return out;
   }
 }
