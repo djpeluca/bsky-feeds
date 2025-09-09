@@ -165,7 +165,7 @@ function updateFeedCard(feedId, data){
   const stats = document.getElementById(\`\${feedId}-stats\`);
   if(!data){ stats.innerHTML='<div class="error">Failed to load analytics</div>'; return; }
 
-  stats.innerHTML=\`
+  stats.innerHTML = \`
     <div class="stat-item">
       <span class="stat-label">Total Posts:</span>
       <strong class="stat-value">\${data.postCount}</strong>
@@ -183,15 +183,20 @@ function updateFeedCard(feedId, data){
     </div>
   \`;
 
-  if(data.dailyQuantity){
+  if(data.dailyQuantity && data.dailyQuantity.length > 0){
     const ctx = document.getElementById(\`\${feedId}-weeklyChart\`).getContext('2d');
     if (Chart.getChart(ctx)) Chart.getChart(ctx).destroy();
     new Chart(ctx,{
       type:'bar',
       data:{ 
         labels: data.dailyQuantity.map(d=>d.day), 
-        datasets:[{label:'Posts per Day', data:data.dailyQuantity.map(d=>d.count),
-                  backgroundColor:'rgba(0,102,204,0.7)', borderColor:'rgba(0,102,204,1)', borderWidth:1}]
+        datasets:[{
+          label:'Posts per Day', 
+          data:data.dailyQuantity.map(d=>d.count),
+          backgroundColor:'rgba(0,102,204,0.7)', 
+          borderColor:'rgba(0,102,204,1)', 
+          borderWidth:1
+        }]
       },
       options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } } }
     });
@@ -201,8 +206,7 @@ function updateFeedCard(feedId, data){
   const labelEl = document.getElementById(\`\${feedId}-heatmap-labels\`);
   if(data.dowHourHeatmap){
     const maxCount = Math.max(...data.dowHourHeatmap.map(c=>c.count));
-    // Correct labels to match backend Mongo dow: Sunday=1..Saturday=7
-    const dowLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const dowLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']; // match backend dow numbering Sunday=1
 
     heatmapEl.innerHTML = '';
     labelEl.innerHTML = '';
