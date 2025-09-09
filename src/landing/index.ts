@@ -82,14 +82,8 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
 .container { max-width: 1200px; margin: auto; padding: 1rem; }
 .dashboard { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; }
 .block-title { width: 100%; font-size: 1.2rem; margin-top: 2rem; margin-bottom: 0.5rem; font-weight: bold; }
-
-/* Cards */
 .card { background: white; padding: 1rem; border-radius: 8px; width: 550px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex: 0 0 auto; }
-/* Small screens: full width */
-@media(max-width: 1150px) {
-  .card { width: 100% !important; }
-}
-
+@media(max-width: 1150px) { .card { width: 100% !important; } }
 .chart-container { height: 250px; }
 .stat-item { display: flex; align-items: center; margin: 0.5rem 0; }
 .stat-label { flex: 1; text-align: left; }
@@ -97,7 +91,6 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
 .stat-trend { flex: 0; text-align: right; white-space: nowrap; margin-left: 0.5rem; }
 .trend-up { color: green; }
 .trend-down { color: red; }
-
 .heatmap-wrapper { display: flex; gap: 4px; }
 .heatmap-labels { display: flex; flex-direction: column; justify-content: flex-start; font-size: 0.8rem; line-height: 1; }
 .heatmap-labels div { flex: 1; display: flex; align-items: center; justify-content: flex-end; padding-right: 4px; }
@@ -155,7 +148,6 @@ async function fetchAnalytics(feedId, timeout=60000){
   } finally { clearTimeout(timer); }
 }
 
-// Render trend as percentage
 function renderTrend(delta, base){
   if(base === 0) return '<span>0%</span>';
   const perc = Math.round((delta / base) * 100);
@@ -223,8 +215,17 @@ function updateFeedCard(feedId, data){
       rowDiv.className='heatmap-row';
 
       for(let h=0; h<24; h++){
-        const cell = data.dowHourHeatmap.find(c => c.dow === d && c.hour === h);
-        const count = cell ? cell.count : 0;
+        let cell = data.dowHourHeatmap.find(c => c.dow === d && c.hour === h);
+        let count = cell ? cell.count : 0;
+
+        const today = new Date();
+        const localHour = today.getHours();
+        const todayDow = today.getDay() === 0 ? 7 : today.getDay();
+        if(d===todayDow && h>localHour){
+          const historical = data.dowHourHeatmap.filter(c=>c.dow===d && c.hour===h).map(c=>c.count);
+          count = historical.length>0 ? Math.round(historical.reduce((a,b)=>a+b,0)/historical.length) : 0;
+        }
+
         const intensity = maxCount>0 ? Math.round((count/maxCount)*255) : 0;
         const color = 'rgb('+intensity+',0,'+(255-intensity)+')';
 
