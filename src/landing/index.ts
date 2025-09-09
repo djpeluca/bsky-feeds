@@ -114,7 +114,7 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
   <div class="dashboard">
     <div class="block-title">Regional Feeds</div>
     ${feeds.filter(f => GMT3_FEEDS.includes(f.name)).map(feed => `
-      <div class="card" id="${feed.name}-card" data-tz="gmt-3">
+      <div class="card" id="${feed.name}-card">
         <h2>${feed.displayName}</h2>
         <div class="stats" id="${feed.name}-stats"><div class="loading">Loading analytics...</div></div>
         <div class="chart-container"><canvas id="${feed.name}-weeklyChart"></canvas></div>
@@ -127,7 +127,7 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
     `).join('')}
     <div class="block-title">Tech Feeds</div>
     ${feeds.filter(f => !GMT3_FEEDS.includes(f.name)).map(feed => `
-      <div class="card" id="${feed.name}-card" data-tz="utc">
+      <div class="card" id="${feed.name}-card">
         <h2>${feed.displayName}</h2>
         <div class="stats" id="${feed.name}-stats"><div class="loading">Loading analytics...</div></div>
         <div class="chart-container"><canvas id="${feed.name}-weeklyChart"></canvas></div>
@@ -155,10 +155,13 @@ async function fetchAnalytics(feedId, timeout=60000){
   } finally { clearTimeout(timer); }
 }
 
-function renderTrend(val){
-  if(val > 0) return '<span class="trend-up">↑ '+val+'%</span>';
-  if(val < 0) return '<span class="trend-down">↓ '+Math.abs(val)+'%</span>';
-  return '<span>'+val+'%</span>';
+// Render trend as percentage
+function renderTrend(delta, base){
+  if(base === 0) return '<span>0%</span>';
+  const perc = Math.round((delta / base) * 100);
+  if(perc > 0) return '<span class="trend-up">↑ '+perc+'%</span>';
+  if(perc < 0) return '<span class="trend-down">↓ '+Math.abs(perc)+'%</span>';
+  return '<span>0%</span>';
 }
 
 function updateFeedCard(feedId, data){
@@ -169,17 +172,17 @@ function updateFeedCard(feedId, data){
     <div class="stat-item">
       <span class="stat-label">Total Posts:</span>
       <strong class="stat-value">\${data.postCount}</strong>
-      <span class="stat-trend">\${renderTrend(data.postCountTrend)}</span>
+      <span class="stat-trend">\${renderTrend(data.postCountTrend, data.postCount - data.postCountTrend)}</span>
     </div>
     <div class="stat-item">
       <span class="stat-label">Unique Authors:</span>
       <strong class="stat-value">\${data.uniqueAuthors}</strong>
-      <span class="stat-trend">\${renderTrend(data.uniqueAuthorsTrend)}</span>
+      <span class="stat-trend">\${renderTrend(data.uniqueAuthorsTrend, data.uniqueAuthors - data.uniqueAuthorsTrend)}</span>
     </div>
     <div class="stat-item">
       <span class="stat-label">Average Posts/Day:</span>
       <strong class="stat-value">\${data.avgPostsPerDay.toFixed(2)}</strong>
-      <span class="stat-trend">\${renderTrend(data.avgPostsPerDayTrend)}</span>
+      <span class="stat-trend">\${renderTrend(data.avgPostsPerDayTrend, data.avgPostsPerDay - data.avgPostsPerDayTrend)}</span>
     </div>
   \`;
 
@@ -206,7 +209,7 @@ function updateFeedCard(feedId, data){
   const labelEl = document.getElementById(\`\${feedId}-heatmap-labels\`);
   if(data.dowHourHeatmap){
     const maxCount = Math.max(...data.dowHourHeatmap.map(c=>c.count));
-    const dowLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']; // match backend dow numbering Sunday=1
+    const dowLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
     heatmapEl.innerHTML = '';
     labelEl.innerHTML = '';
