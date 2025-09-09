@@ -83,12 +83,8 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
 .dashboard { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; }
 .block-title { width: 100%; font-size: 1.2rem; margin-top: 2rem; margin-bottom: 0.5rem; font-weight: bold; }
 
-/* Cards */
 .card { background: white; padding: 1rem; border-radius: 8px; width: 550px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex: 0 0 auto; }
-/* Small screens: full width */
-@media(max-width: 1150px) {
-  .card { width: 100% !important; }
-}
+@media(max-width: 1150px) { .card { width: 100% !important; } }
 
 .chart-container { height: 250px; }
 .stat-item { display: flex; align-items: center; margin: 0.5rem 0; }
@@ -185,6 +181,8 @@ function updateFeedCard(feedId, data){
   \`;
 
   if(data.dailyQuantity){
+    // Sort days correctly
+    data.dailyQuantity.sort((a,b)=>new Date(a.day)-new Date(b.day));
     const ctx = document.getElementById(\`\${feedId}-weeklyChart\`).getContext('2d');
     if (Chart.getChart(ctx)) Chart.getChart(ctx).destroy();
     new Chart(ctx,{ type:'bar',
@@ -215,7 +213,8 @@ function updateFeedCard(feedId, data){
       rowDiv.className='heatmap-row';
 
       for(let h=0; h<24; h++){
-        const dowMongo = d === 7 ? 1 : d + 1; // Mongo: 1=Sun..7=Sat
+        // Map Monday-first to Mongo dow
+        const dowMongo = d===7 ? 1 : d+1; // 1=Sun, 7=Sat
         const cell = data.dowHourHeatmap.find(c => c.dow === dowMongo && c.hour === h);
         const count = cell ? cell.count : 0;
         const intensity = maxCount>0 ? Math.round((count/maxCount)*255) : 0;
