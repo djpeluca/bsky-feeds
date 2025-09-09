@@ -79,28 +79,18 @@ function generateLandingPageHTML(feeds: { name: string; displayName: string }[],
 <style>
 body { font-family: Arial; margin: 0; background: #f4f4f4; }
 header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
-
 .container { max-width: 1200px; margin: auto; padding: 1rem; }
 .dashboard { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; }
 .block-title { width: 100%; font-size: 1.2rem; margin-top: 2rem; margin-bottom: 0.5rem; font-weight: bold; }
 
-/* Fixed width cards, max two per row */
-.card { 
-  background: white; 
-  padding: 1rem; 
-  border-radius: 8px; 
-  width: 550px; 
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
-  flex: 0 0 auto;
-}
-
-/* Mobile: full width cards */
+/* Cards */
+.card { background: white; padding: 1rem; border-radius: 8px; width: 550px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex: 0 0 auto; }
+/* Small screens: full width */
 @media(max-width: 1150px) {
-  .card { width: 100%; }
+  .card { width: 100% !important; }
 }
 
 .chart-container { height: 250px; }
-
 .stat-item { display: flex; align-items: center; margin: 0.5rem 0; }
 .stat-label { flex: 1; text-align: left; }
 .stat-value { flex: 0; min-width: 70px; text-align: right; }
@@ -111,7 +101,6 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
 .heatmap-wrapper { display: flex; gap: 4px; }
 .heatmap-labels { display: flex; flex-direction: column; justify-content: flex-start; font-size:0.8rem; line-height:1; }
 .heatmap-labels div { flex:1; display:flex; align-items:center; justify-content:flex-end; padding-right:4px; }
-
 .heatmap { display: flex; flex-direction: column; gap:2px; flex:1; }
 .heatmap-row { display: flex; width: 100%; }
 .heatmap-cell { flex:1; aspect-ratio: 1 / 1; }
@@ -199,9 +188,11 @@ function updateFeedCard(feedId, data){
     const ctx = document.getElementById(\`\${feedId}-weeklyChart\`).getContext('2d');
     if (Chart.getChart(ctx)) Chart.getChart(ctx).destroy();
     new Chart(ctx,{ type:'bar',
-      data:{ labels:data.dailyQuantity.map(d=>d.day), 
-             datasets:[{label:'Posts per Day', data:data.dailyQuantity.map(d=>d.count),
-                        backgroundColor:'rgba(0,102,204,0.7)', borderColor:'rgba(0,102,204,1)', borderWidth:1}]},
+      data:{ 
+        labels: data.dailyQuantity.map(d=>d.day), 
+        datasets:[{label:'Posts per Day', data:data.dailyQuantity.map(d=>d.count),
+                   backgroundColor:'rgba(0,102,204,0.7)', borderColor:'rgba(0,102,204,1)', borderWidth:1}]
+      },
       options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } } }
     });
   }
@@ -210,7 +201,7 @@ function updateFeedCard(feedId, data){
   const labelEl = document.getElementById(\`\${feedId}-heatmap-labels\`);
   if(data.dowHourHeatmap){
     const maxCount = Math.max(...data.dowHourHeatmap.map(c=>c.count));
-    const dowLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const dowLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']; // Monday first
 
     heatmapEl.innerHTML = '';
     labelEl.innerHTML = '';
@@ -224,7 +215,8 @@ function updateFeedCard(feedId, data){
       rowDiv.className='heatmap-row';
 
       for(let h=0; h<24; h++){
-        const cell = data.dowHourHeatmap.find(c => c.dow === d && c.hour === h);
+        const dowMongo = d === 7 ? 1 : d + 1; // Mongo: 1=Sun..7=Sat
+        const cell = data.dowHourHeatmap.find(c => c.dow === dowMongo && c.hour === h);
         const count = cell ? cell.count : 0;
         const intensity = maxCount>0 ? Math.round((count/maxCount)*255) : 0;
         const color = 'rgb('+intensity+',0,'+(255-intensity)+')';
