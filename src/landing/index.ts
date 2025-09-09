@@ -86,13 +86,13 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
 .dashboard { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: flex-start; }
 .block-title { width: 100%; font-size: 1.2rem; margin-top: 2rem; margin-bottom: 0.5rem; font-weight: bold; }
 
-/* Cards two-column layout for wide screens */
+/* Original working cards layout */
 .card { 
   background: white; 
   padding: 1rem; 
   border-radius: 8px; 
-  flex: 1 1 calc(50% - 1rem); /* flexible two columns */
-  max-width: calc(50% - 1rem);  
+  flex: 1 1 auto; /* let them size naturally */
+  min-width: 300px; /* ensures cards don’t get too small */
   box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
 }
 
@@ -100,7 +100,6 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
 @media(max-width: 900px) {
   .card {
     flex: 1 1 100%;
-    max-width: 100%;
   }
 }
 
