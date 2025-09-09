@@ -44,16 +44,16 @@ export const createLandingPageRouter = (ctx: AppContext) => {
 
       feedAlgos = feedAlgos.map(f => f.name === 'ai' ? { ...f, displayName: 'AI' } : f);
 
-      const regionalOrder = ['uruguay','argentina','brasil','riodelaplata'];
-      const techOrder = ['fediverse','ai','salesforce'];
+      const regionalOrder = ['uruguay', 'argentina', 'brasil', 'riodelaplata'];
+      const techOrder = ['fediverse', 'ai', 'salesforce'];
 
       const regionalFeeds = feedAlgos
         .filter(f => regionalOrder.includes(f.name))
-        .sort((a,b) => regionalOrder.indexOf(a.name) - regionalOrder.indexOf(b.name));
+        .sort((a, b) => regionalOrder.indexOf(a.name) - regionalOrder.indexOf(b.name));
 
       const techFeeds = feedAlgos
         .filter(f => techOrder.includes(f.name))
-        .sort((a,b) => techOrder.indexOf(a.name) - techOrder.indexOf(b.name));
+        .sort((a, b) => techOrder.indexOf(a.name) - techOrder.indexOf(b.name));
 
       const orderedFeeds = [...regionalFeeds, ...techFeeds];
 
@@ -72,8 +72,8 @@ function generateLandingPageHTML(feeds: { name: string; displayName: string }[],
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Bsky Feeds Analytics Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
 <style>
@@ -99,11 +99,11 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
 .trend-down { color: red; }
 
 .heatmap-wrapper { display: flex; gap: 4px; }
-.heatmap-labels { display: flex; flex-direction: column; justify-content: flex-start; font-size:0.8rem; line-height:1; }
-.heatmap-labels div { flex:1; display:flex; align-items:center; justify-content:flex-end; padding-right:4px; }
-.heatmap { display: flex; flex-direction: column; gap:2px; flex:1; }
+.heatmap-labels { display: flex; flex-direction: column; justify-content: flex-start; font-size: 0.8rem; line-height: 1; }
+.heatmap-labels div { flex: 1; display: flex; align-items: center; justify-content: flex-end; padding-right: 4px; }
+.heatmap { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 .heatmap-row { display: flex; width: 100%; }
-.heatmap-cell { flex:1; aspect-ratio: 1 / 1; }
+.heatmap-cell { flex: 1; aspect-ratio: 1 / 1; }
 .loading { color: gray; }
 .error { color: red; }
 </style>
@@ -125,7 +125,6 @@ header { background: #0066cc; color: white; padding: 1rem; text-align: center; }
         </div>
       </div>
     `).join('')}
-
     <div class="block-title">Tech Feeds</div>
     ${feeds.filter(f => !GMT3_FEEDS.includes(f.name)).map(feed => `
       <div class="card" id="${feed.name}-card" data-tz="utc">
@@ -187,11 +186,12 @@ function updateFeedCard(feedId, data){
   if(data.dailyQuantity){
     const ctx = document.getElementById(\`\${feedId}-weeklyChart\`).getContext('2d');
     if (Chart.getChart(ctx)) Chart.getChart(ctx).destroy();
-    new Chart(ctx,{ type:'bar',
+    new Chart(ctx,{
+      type:'bar',
       data:{ 
         labels: data.dailyQuantity.map(d=>d.day), 
         datasets:[{label:'Posts per Day', data:data.dailyQuantity.map(d=>d.count),
-                   backgroundColor:'rgba(0,102,204,0.7)', borderColor:'rgba(0,102,204,1)', borderWidth:1}]
+                  backgroundColor:'rgba(0,102,204,0.7)', borderColor:'rgba(0,102,204,1)', borderWidth:1}]
       },
       options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } } }
     });
@@ -200,9 +200,9 @@ function updateFeedCard(feedId, data){
   const heatmapEl = document.getElementById(\`\${feedId}-heatmap\`);
   const labelEl = document.getElementById(\`\${feedId}-heatmap-labels\`);
   if(data.dowHourHeatmap){
-    // ✅ Scale against the max of the entire feed dataset, not per row
     const maxCount = Math.max(...data.dowHourHeatmap.map(c=>c.count));
-    const dowLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']; // Monday first
+    // Correct labels to match backend Mongo dow: Sunday=1..Saturday=7
+    const dowLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
     heatmapEl.innerHTML = '';
     labelEl.innerHTML = '';
@@ -216,8 +216,7 @@ function updateFeedCard(feedId, data){
       rowDiv.className='heatmap-row';
 
       for(let h=0; h<24; h++){
-        const dowMongo = d === 7 ? 1 : d + 1; // Mongo: 1=Sun..7=Sat
-        const cell = data.dowHourHeatmap.find(c => c.dow === dowMongo && c.hour === h);
+        const cell = data.dowHourHeatmap.find(c => c.dow === d && c.hour === h);
         const count = cell ? cell.count : 0;
         const intensity = maxCount>0 ? Math.round((count/maxCount)*255) : 0;
         const color = 'rgb('+intensity+',0,'+(255-intensity)+')';

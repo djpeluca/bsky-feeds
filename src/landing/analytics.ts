@@ -178,7 +178,7 @@ async function getDailyQuantity(db: any, feedId: string, tz: string) {
       dayStrs.push(localDayStr);
     }
 
-    const startDateLocal = new Date(new Date(dayStrs[0] + 'T00:00:00').toLocaleString('en-US', { timeZone: tz }));
+    const startDateLocal = new Date(new Date(dayStrs + 'T00:00:00').toLocaleString('en-US', { timeZone: tz }));
     const endDateLocal = new Date(new Date(dayStrs[dayStrs.length - 1] + 'T23:59:59.999').toLocaleString('en-US', { timeZone: tz }));
 
     const result = await db
@@ -202,7 +202,7 @@ async function getDailyQuantity(db: any, feedId: string, tz: string) {
   }
 }
 
-// --- Corrected Heatmap: uses daily string as canonical date ---
+// --- Corrected Heatmap: always Sunday=1 ... Saturday=7 ---
 async function getDowHourHeatmap(db: any, feedId: string, tz: string) {
   try {
     const now = new Date();
@@ -226,13 +226,13 @@ async function getDowHourHeatmap(db: any, feedId: string, tz: string) {
       ])
       .toArray();
 
-    // Map day string to dow (Monday=1,...Sunday=7)
+    // Map day string to dow (Sunday=1,...Saturday=7 for consistency)
     const dowMap: Record<string, number> = {};
     for (let i = 0; i < 7; i++) {
       const d = new Date(startDate);
       d.setDate(d.getDate() + i);
       const dayStr = d.toLocaleDateString('en-CA', { timeZone: tz });
-      const dow = ((d.getDay() + 6) % 7) + 1; // Monday=1
+      const dow = d.getDay() + 1; // Sunday=1, Monday=2, ..., Saturday=7
       dowMap[dayStr] = dow;
     }
 
