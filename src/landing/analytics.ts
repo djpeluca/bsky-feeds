@@ -22,12 +22,6 @@ const CACHE_TTL_MS = 1000 * 60 * 60; // 1 hour
 const GMT3_FEEDS = ['uruguay', 'argentina', 'riodelaplata', 'brasil'];
 const LOOKBACK_DAYS = 15;
 
-// --- Helper to compute start of day in any timezone ---
-function getStartOfDayInTZ(date: Date, tz: string) {
-  const [year, month, day] = date.toLocaleDateString('en-CA', { timeZone: tz }).split('-').map(Number);
-  return new Date(year, month - 1, day, 0, 0, 0, 0);
-}
-
 export async function getFeedAnalytics(feedId: string, period: string = 'week'): Promise<FeedAnalytics> {
   const nowMs = Date.now();
   const cacheKey = `${feedId}:${period}`;
@@ -41,39 +35,43 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   if (!algos[feedId]) throw new Error(`Feed ${feedId} not found`);
 
   const tzName = GMT3_FEEDS.includes(feedId) ? 'America/Montevideo' : 'UTC';
+
   const now = new Date();
 
-  // --- Define the period window in feed's timezone ---
-  let periodStart = getStartOfDayInTZ(now, tzName);
+  // --- Define the period window in feed's local timezone ---
+  let periodStartLocal = getStartOfDayInTZ(now, tzName);
+
   switch (period) {
     case 'day':
       break;
     case 'week':
-      periodStart.setDate(periodStart.getDate() - 6);
+      periodStartLocal.setDate(periodStartLocal.getDate() - 6);
       break;
     case 'month':
-      periodStart.setDate(periodStart.getDate() - 29);
+      periodStartLocal.setDate(periodStartLocal.getDate() - 29);
       break;
     default:
-      periodStart.setDate(periodStart.getDate() - 6);
+      periodStartLocal.setDate(periodStartLocal.getDate() - 6);
   }
 
-  const periodStartMs = periodStart.getTime();
-  const nowMsUtc = now.getTime();
+  // --- Convert local period start to UTC ms ---
+  const periodStartMs = Date.parse(periodStartLocal.toLocaleString('en-CA', { timeZone: 'UTC' }));
 
   // --- Aggregate metrics ---
+  const nowMsUtc = now.getTime();
   const postCount = await getPostCountForFeed(db, feedId, periodStartMs, nowMsUtc);
 
-  const previousPeriodStart = new Date(periodStart);
-  previousPeriodStart.setDate(previousPeriodStart.getDate() - (period === 'month' ? 30 : 7));
-  const previousPeriodStartMs = previousPeriodStart.getTime();
+  const previousPeriodStartLocal = new Date(periodStartLocal);
+  previousPeriodStartLocal.setDate(previousPeriodStartLocal.getDate() - (period === 'month' ? 30 : 7));
+  const previousPeriodStartMs = Date.parse(previousPeriodStartLocal.toLocaleString('en-CA', { timeZone: 'UTC' }));
+
   const previousPostCount = await getPostCountForFeed(db, feedId, previousPeriodStartMs, periodStartMs);
 
   const uniqueAuthors = await getUniqueAuthorsForFeed(db, feedId, periodStartMs, nowMsUtc);
   const previousUniqueAuthors = await getUniqueAuthorsForFeed(db, feedId, previousPeriodStartMs, periodStartMs);
 
-  const daysInPeriod = getDaysInPeriod(periodStart, now);
-  const daysInPreviousPeriod = getDaysInPeriod(previousPeriodStart, periodStart);
+  const daysInPeriod = getDaysInPeriod(periodStartLocal, now);
+  const daysInPreviousPeriod = getDaysInPeriod(previousPeriodStartLocal, periodStartLocal);
 
   const avgPostsPerDay = daysInPeriod > 0 ? postCount / daysInPeriod : 0;
   const previousAvgPostsPerDay = daysInPreviousPeriod > 0 ? previousPostCount / daysInPreviousPeriod : 0;
@@ -86,7 +84,7 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   const timeDistribution = await getTimeDistribution(db, feedId, periodStartMs, nowMsUtc, tzName);
 
   // --- Daily quantity (per local day) ---
-  const dailyQuantity = await getDailyQuantity(db, feedId, periodStart, now, tzName);
+  const dailyQuantity = await getDailyQuantity(db, feedId, periodStartLocal, now, tzName);
 
   // --- DOW × Hour heatmap (local TZ) ---
   const dowHourHeatmap = await getDowHourHeatmap(db, feedId, LOOKBACK_DAYS, tzName);
@@ -108,7 +106,18 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   return analyticsData;
 }
 
-// --- Helper functions ---
+// --- Helper: start of day in TZ ---
+function getStartOfDayInTZ(date: Date, tzName: string): Date {
+  const parts = date.toLocaleString('en-CA', {
+    timeZone: tzName,
+    hour12: false,
+  }).split(/[/, ]/); // ["YYYY", "MM", "DD", "HH:MM:SS"]
+
+  const [year, month, day] = parts.map(Number);
+  return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+}
+
+// --- Other helpers ---
 function getDaysInPeriod(startDate: Date, endDate: Date): number {
   const diff = endDate.getTime() - startDate.getTime();
   return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
@@ -179,7 +188,7 @@ async function getTimeDistribution(db: any, feedId: string, startMs: number, end
 // Daily distribution in local TZ
 async function getDailyQuantity(db: any, feedId: string, startDate: Date, endDate: Date, tzName: string) {
   try {
-    const startMs = startDate.getTime();
+    const startMs = Date.parse(startDate.toLocaleString('en-CA', { timeZone: 'UTC' }));
     const endDateFull = new Date(endDate);
     endDateFull.setHours(23, 59, 59, 999);
     const endMs = endDateFull.getTime();
@@ -221,11 +230,13 @@ async function getDailyQuantity(db: any, feedId: string, startDate: Date, endDat
 async function getDowHourHeatmap(db: any, feedId: string, lookbackDays: number, tzName: string) {
   try {
     const now = new Date();
-    const start = getStartOfDayInTZ(new Date(now.getTime() - (lookbackDays - 1) * 86400000), tzName);
-    const end = getStartOfDayInTZ(now, tzName);
+    const start = getStartOfDayInTZ(now, tzName);
+    start.setDate(start.getDate() - lookbackDays + 1);
+
+    const end = new Date(now);
     end.setHours(23, 59, 59, 999);
 
-    const startMs = start.getTime();
+    const startMs = Date.parse(start.toLocaleString('en-CA', { timeZone: 'UTC' }));
     const endMs = end.getTime();
 
     const raw = await db
