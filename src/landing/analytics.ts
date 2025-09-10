@@ -22,32 +22,6 @@ const CACHE_TTL_MS = 1000 * 60 * 60; // 1 hour
 const GMT3_FEEDS = ['uruguay', 'argentina', 'riodelaplata', 'brasil'];
 const LOOKBACK_DAYS = 15;
 
-// --- Helper to compute start of day in any timezone ---
-function getStartOfDayInTZ(date: Date, tz: string) {
-  const [year, month, day] = date.toLocaleDateString('en-CA', { timeZone: tz }).split('-').map(Number);
-  return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
-}
-
-// --- Convert a local date to UTC ms for DB query ---
-function toUtcMs(date: Date, tz: string): number {
-  const localDateStr = date.toLocaleString('en-CA', { timeZone: tz });
-  return Date.parse(localDateStr);
-}
-
-// --- Days between two dates ---
-function getDaysInPeriod(startDate: Date, endDate: Date): number {
-  const diff = endDate.getTime() - startDate.getTime();
-  return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
-}
-
-export function getAvailableFeeds() {
-  if (!algos) return [];
-  return Object.keys(algos).map((id) => ({
-    id,
-    name: algos[id]?.handler?.name || id,
-  }));
-}
-
 export async function getFeedAnalytics(feedId: string, period: string = 'week'): Promise<FeedAnalytics> {
   const nowMs = Date.now();
   const cacheKey = `${feedId}:${period}`;
@@ -61,10 +35,11 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   if (!algos[feedId]) throw new Error(`Feed ${feedId} not found`);
 
   const tzName = GMT3_FEEDS.includes(feedId) ? 'America/Montevideo' : 'UTC';
-  const now = new Date();
 
-  // --- Define the period window in feed's local timezone ---
-  let periodStart = getStartOfDayInTZ(now, tzName);
+  // --- Define the period window ---
+  const now = new Date();
+  const periodStart = new Date(now);
+  periodStart.setHours(0, 0, 0, 0);
   switch (period) {
     case 'day':
       break;
@@ -78,15 +53,14 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
       periodStart.setDate(periodStart.getDate() - 6);
   }
 
-  const periodStartMs = toUtcMs(periodStart, tzName);
-  const nowMsUtc = toUtcMs(now, tzName);
+  const periodStartMs = periodStart.getTime();
+  const nowMsUtc = now.getTime();
 
   // --- Aggregate metrics ---
   const postCount = await getPostCountForFeed(db, feedId, periodStartMs, nowMsUtc);
-
   const previousPeriodStart = new Date(periodStart);
   previousPeriodStart.setDate(previousPeriodStart.getDate() - (period === 'month' ? 30 : 7));
-  const previousPeriodStartMs = toUtcMs(previousPeriodStart, tzName);
+  const previousPeriodStartMs = previousPeriodStart.getTime();
   const previousPostCount = await getPostCountForFeed(db, feedId, previousPeriodStartMs, periodStartMs);
 
   const uniqueAuthors = await getUniqueAuthorsForFeed(db, feedId, periodStartMs, nowMsUtc);
@@ -126,6 +100,20 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
 
   analyticsCache[cacheKey] = { timestamp: nowMs, data: analyticsData };
   return analyticsData;
+}
+
+// --- Helper functions ---
+function getDaysInPeriod(startDate: Date, endDate: Date): number {
+  const diff = endDate.getTime() - startDate.getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
+}
+
+export function getAvailableFeeds() {
+  if (!algos) return [];
+  return Object.keys(algos).map((id) => ({
+    id,
+    name: algos[id]?.handler?.name || id,
+  }));
 }
 
 // --- Database queries ---
@@ -185,10 +173,11 @@ async function getTimeDistribution(db: any, feedId: string, startMs: number, end
 // Daily distribution in local TZ
 async function getDailyQuantity(db: any, feedId: string, startDate: Date, endDate: Date, tzName: string) {
   try {
-    const startMs = toUtcMs(startDate, tzName);
+    const startMs = startDate.getTime();
+    // ✅ Extend end to end of day
     const endDateFull = new Date(endDate);
     endDateFull.setHours(23, 59, 59, 999);
-    const endMs = toUtcMs(endDateFull, tzName);
+    const endMs = endDateFull.getTime();
 
     const result = await db
       .collection('post')
@@ -227,12 +216,16 @@ async function getDailyQuantity(db: any, feedId: string, startDate: Date, endDat
 async function getDowHourHeatmap(db: any, feedId: string, lookbackDays: number, tzName: string) {
   try {
     const now = new Date();
-    const start = getStartOfDayInTZ(new Date(now.getTime() - (lookbackDays - 1) * 86400000), tzName);
-    const end = getStartOfDayInTZ(now, tzName);
+    const start = new Date();
+    start.setDate(now.getDate() - lookbackDays + 1);
+    start.setHours(0, 0, 0, 0);
+
+    // ✅ Extend end to end of current day to include all hours
+    const end = new Date(now);
     end.setHours(23, 59, 59, 999);
 
-    const startMs = toUtcMs(start, tzName);
-    const endMs = toUtcMs(end, tzName);
+    const startMs = start.getTime();
+    const endMs = end.getTime();
 
     const raw = await db
       .collection('post')
