@@ -174,7 +174,11 @@ async function getTimeDistribution(db: any, feedId: string, startMs: number, end
 async function getDailyQuantity(db: any, feedId: string, startDate: Date, endDate: Date, tzName: string) {
   try {
     const startMs = startDate.getTime();
-    const endMs = endDate.getTime();
+    // ✅ Extend end to end of day
+    const endDateFull = new Date(endDate);
+    endDateFull.setHours(23, 59, 59, 999);
+    const endMs = endDateFull.getTime();
+
     const result = await db
       .collection('post')
       .aggregate([
@@ -192,7 +196,7 @@ async function getDailyQuantity(db: any, feedId: string, startDate: Date, endDat
 
     const days: string[] = [];
     const cursor = new Date(startDate);
-    while (cursor <= endDate) {
+    while (cursor <= endDateFull) {
       const dayStr = cursor.toLocaleDateString('en-CA', { timeZone: tzName });
       days.push(dayStr);
       cursor.setDate(cursor.getDate() + 1);
@@ -216,8 +220,12 @@ async function getDowHourHeatmap(db: any, feedId: string, lookbackDays: number, 
     start.setDate(now.getDate() - lookbackDays + 1);
     start.setHours(0, 0, 0, 0);
 
+    // ✅ Extend end to end of current day to include all hours
+    const end = new Date(now);
+    end.setHours(23, 59, 59, 999);
+
     const startMs = start.getTime();
-    const endMs = now.getTime();
+    const endMs = end.getTime();
 
     const raw = await db
       .collection('post')
@@ -246,7 +254,11 @@ async function getDowHourHeatmap(db: any, feedId: string, lookbackDays: number, 
   } catch (err) {
     console.error(err);
     const empty: { dow: number; hour: number; count: number }[] = [];
-    for (let d = 1; d <= 7; d++) for (let h = 0; h < 24; h++) empty.push({ dow: d, hour: h, count: 0 });
+    for (let d = 1; d <= 7; d++) {
+      for (let h = 0; h < 24; h++) {
+        empty.push({ dow: d, hour: h, count: 0 });
+      }
+    }
     return empty;
   }
 }
