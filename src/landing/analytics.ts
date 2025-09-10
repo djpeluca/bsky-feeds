@@ -34,9 +34,7 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   if (!db) throw new Error('Database client not initialized');
   if (!algos[feedId]) throw new Error(`Feed ${feedId} not found`);
 
-  const useGMT3 = GMT3_FEEDS.includes(feedId);
-  const tzOffsetHours = useGMT3 ? -3 : 0; // offset from UTC in hours
-  const tzName = useGMT3 ? 'America/Montevideo' : 'UTC';
+  const tzName = GMT3_FEEDS.includes(feedId) ? 'America/Montevideo' : 'UTC';
 
   // --- Define the period window ---
   const now = new Date();
@@ -78,13 +76,13 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   const uniqueAuthorsTrend = uniqueAuthors - previousUniqueAuthors;
   const avgPostsPerDayTrend = avgPostsPerDay - previousAvgPostsPerDay;
 
-  // --- Time distribution (hourly, shifted to local TZ) ---
-  const timeDistribution = await getTimeDistribution(db, feedId, periodStartMs, nowMsUtc, tzOffsetHours);
+  // --- Time distribution (hourly, local TZ) ---
+  const timeDistribution = await getTimeDistribution(db, feedId, periodStartMs, nowMsUtc, tzName);
 
   // --- Daily quantity (per local day) ---
   const dailyQuantity = await getDailyQuantity(db, feedId, periodStart, now, tzName);
 
-  // --- DOW × Hour heatmap using historic average for future hours ---
+  // --- DOW × Hour heatmap (local TZ) ---
   const dowHourHeatmap = await getDowHourHeatmap(db, feedId, LOOKBACK_DAYS, tzName);
 
   const analyticsData: FeedAnalytics = {
@@ -145,7 +143,7 @@ async function getUniqueAuthorsForFeed(db: any, feedId: string, startDateMs: num
 }
 
 // Hourly distribution in local TZ
-async function getTimeDistribution(db: any, feedId: string, startMs: number, endMs: number, tzOffsetHours: number) {
+async function getTimeDistribution(db: any, feedId: string, startMs: number, endMs: number, tzName: string) {
   try {
     const result = await db
       .collection('post')
@@ -153,12 +151,7 @@ async function getTimeDistribution(db: any, feedId: string, startMs: number, end
         { $match: { algoTags: feedId, indexedAt: { $gte: startMs, $lte: endMs } } },
         {
           $addFields: {
-            hour: {
-              $mod: [
-                { $add: [{ $hour: { date: { $toDate: '$indexedAt' }, timezone: 'UTC' } }, tzOffsetHours] },
-                24,
-              ],
-            },
+            hour: { $hour: { date: { $toDate: '$indexedAt' }, timezone: tzName } },
           },
         },
         { $group: { _id: '$hour', count: { $sum: 1 } } },
