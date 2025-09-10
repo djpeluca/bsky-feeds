@@ -181,13 +181,22 @@ function updateFeedCard(feedId, data){
   if(data.dailyQuantity && data.dailyQuantity.length > 0){
     const ctx = document.getElementById(\`\${feedId}-weeklyChart\`).getContext('2d');
     if (Chart.getChart(ctx)) Chart.getChart(ctx).destroy();
+
+    let dailyData = data.dailyQuantity;
+
+    // Exclude the first day only if there are 8 days (extra day) and feed is GMT-3
+    const GMT3_FEEDS = ${JSON.stringify(GMT3_FEEDS)};
+    if(GMT3_FEEDS.includes(feedId) && dailyData.length === 8){
+      dailyData = dailyData.slice(1); // drop the first (oldest) day
+    }
+
     new Chart(ctx,{
       type:'bar',
       data:{ 
-        labels: data.dailyQuantity.map(d=>d.day), 
+        labels: dailyData.map(d=>d.day), 
         datasets:[{
           label:'Posts per Day', 
-          data:data.dailyQuantity.map(d=>d.count),
+          data: dailyData.map(d=>d.count),
           backgroundColor:'rgba(0,102,204,0.7)', 
           borderColor:'rgba(0,102,204,1)', 
           borderWidth:1
