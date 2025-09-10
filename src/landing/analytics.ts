@@ -22,6 +22,12 @@ const CACHE_TTL_MS = 1000 * 60 * 60; // 1 hour
 const GMT3_FEEDS = ['uruguay', 'argentina', 'riodelaplata', 'brasil'];
 const LOOKBACK_DAYS = 15;
 
+// --- Helper to compute start of day in any timezone ---
+function getStartOfDayInTZ(date: Date, tz: string) {
+  const [year, month, day] = date.toLocaleDateString('en-CA', { timeZone: tz }).split('-').map(Number);
+  return new Date(year, month - 1, day, 0, 0, 0, 0);
+}
+
 export async function getFeedAnalytics(feedId: string, period: string = 'week'): Promise<FeedAnalytics> {
   const nowMs = Date.now();
   const cacheKey = `${feedId}:${period}`;
@@ -35,11 +41,10 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
   if (!algos[feedId]) throw new Error(`Feed ${feedId} not found`);
 
   const tzName = GMT3_FEEDS.includes(feedId) ? 'America/Montevideo' : 'UTC';
-
-  // --- Define the period window ---
   const now = new Date();
-  const periodStart = new Date(now);
-  periodStart.setHours(0, 0, 0, 0);
+
+  // --- Define the period window in feed's timezone ---
+  let periodStart = getStartOfDayInTZ(now, tzName);
   switch (period) {
     case 'day':
       break;
@@ -58,6 +63,7 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
 
   // --- Aggregate metrics ---
   const postCount = await getPostCountForFeed(db, feedId, periodStartMs, nowMsUtc);
+
   const previousPeriodStart = new Date(periodStart);
   previousPeriodStart.setDate(previousPeriodStart.getDate() - (period === 'month' ? 30 : 7));
   const previousPeriodStartMs = previousPeriodStart.getTime();
@@ -174,7 +180,6 @@ async function getTimeDistribution(db: any, feedId: string, startMs: number, end
 async function getDailyQuantity(db: any, feedId: string, startDate: Date, endDate: Date, tzName: string) {
   try {
     const startMs = startDate.getTime();
-    // ✅ Extend end to end of day
     const endDateFull = new Date(endDate);
     endDateFull.setHours(23, 59, 59, 999);
     const endMs = endDateFull.getTime();
@@ -216,12 +221,8 @@ async function getDailyQuantity(db: any, feedId: string, startDate: Date, endDat
 async function getDowHourHeatmap(db: any, feedId: string, lookbackDays: number, tzName: string) {
   try {
     const now = new Date();
-    const start = new Date();
-    start.setDate(now.getDate() - lookbackDays + 1);
-    start.setHours(0, 0, 0, 0);
-
-    // ✅ Extend end to end of current day to include all hours
-    const end = new Date(now);
+    const start = getStartOfDayInTZ(new Date(now.getTime() - (lookbackDays - 1) * 86400000), tzName);
+    const end = getStartOfDayInTZ(now, tzName);
     end.setHours(23, 59, 59, 999);
 
     const startMs = start.getTime();
