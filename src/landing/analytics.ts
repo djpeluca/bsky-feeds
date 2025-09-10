@@ -193,7 +193,7 @@ async function getDailyQuantity(db: any, feedId: string, startDate: Date, endDat
     const days: string[] = [];
     const cursor = new Date(startDate);
     while (cursor <= endDate) {
-      const dayStr = cursor.toISOString().slice(0, 10);
+      const dayStr = cursor.toLocaleDateString('en-CA', { timeZone: tzName });
       days.push(dayStr);
       cursor.setDate(cursor.getDate() + 1);
     }
