@@ -174,7 +174,11 @@ async function getDailyQuantity(db: any, feedId: string, startDate: Date, tzName
   try {
     const now = new Date();
     const startMs = startDate.getTime();
-    const endMs = now.getTime();
+    
+    // For regional feeds, add 24 hours to ensure we capture the full current day
+    const endMs = GMT3_FEEDS.includes(feedId) 
+      ? now.getTime() + (24 * 60 * 60 * 1000) // Add 24 hours
+      : now.getTime();
 
     const result = await db
       .collection('post')
