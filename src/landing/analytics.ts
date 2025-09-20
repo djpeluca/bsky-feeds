@@ -17,18 +17,39 @@ export interface FeedAnalytics {
 // --- In-memory cache for 1 hour ---
 const analyticsCache: Record<string, { timestamp: number; data: FeedAnalytics }> = {};
 const CACHE_TTL_MS = 1000 * 60 * 60; // 1 hour
+const REFRESH_INTERVAL_MS = 1000 * 60 * 60; // 1 hour
 
 // Feeds that should use GMT-3
 const GMT3_FEEDS = ['uruguay', 'argentina', 'riodelaplata', 'brasil'];
 const LOOKBACK_DAYS = 15;
 
+// Background refresh state
+let refreshInterval: NodeJS.Timeout | null = null;
+let isWarmingCache = false;
+
 export async function getFeedAnalytics(feedId: string, period: string = 'week'): Promise<FeedAnalytics> {
   const nowMs = Date.now();
   const cacheKey = `${feedId}:${period}`;
 
-  if (analyticsCache[cacheKey] && nowMs - analyticsCache[cacheKey].timestamp < CACHE_TTL_MS) {
+  // Always return cached data if available (even if expired) to avoid dead times
+  if (analyticsCache[cacheKey]) {
+    // If cache is fresh, return it
+    if (nowMs - analyticsCache[cacheKey].timestamp < CACHE_TTL_MS) {
+      return analyticsCache[cacheKey].data;
+    }
+    // If cache is stale but exists, return it and trigger background refresh
+    triggerBackgroundRefresh(feedId, period);
     return analyticsCache[cacheKey].data;
   }
+
+  // If no cache exists, we need to compute it synchronously
+  return await computeAndCacheAnalytics(feedId, period);
+}
+
+// Compute analytics and store in cache
+async function computeAndCacheAnalytics(feedId: string, period: string = 'week'): Promise<FeedAnalytics> {
+  const nowMs = Date.now();
+  const cacheKey = `${feedId}:${period}`;
 
   const db = dbClient.client?.db();
   if (!db) throw new Error('Database client not initialized');
@@ -99,6 +120,86 @@ export async function getFeedAnalytics(feedId: string, period: string = 'week'):
 
   analyticsCache[cacheKey] = { timestamp: nowMs, data: analyticsData };
   return analyticsData;
+}
+
+// Trigger background refresh for a specific feed
+function triggerBackgroundRefresh(feedId: string, period: string) {
+  // Don't trigger if already warming cache
+  if (isWarmingCache) return;
+  
+  // Refresh in background without blocking
+  setImmediate(async () => {
+    try {
+      await computeAndCacheAnalytics(feedId, period);
+      console.log(`[Analytics] Background refresh completed for ${feedId}:${period}`);
+    } catch (error) {
+      console.error(`[Analytics] Background refresh failed for ${feedId}:${period}:`, error);
+    }
+  });
+}
+
+// Warm cache for all feeds and periods
+export async function warmAnalyticsCache(): Promise<void> {
+  if (isWarmingCache) {
+    console.log('[Analytics] Cache warming already in progress');
+    return;
+  }
+  
+  isWarmingCache = true;
+  console.log('[Analytics] Starting cache warming...');
+  
+  try {
+    const feeds = getAvailableFeeds();
+    const periods = ['day', 'week', 'month'];
+    
+    const promises: Promise<void>[] = [];
+    for (const feed of feeds) {
+      for (const period of periods) {
+        promises.push(
+          computeAndCacheAnalytics(feed.id, period)
+            .then(() => console.log(`[Analytics] Cached ${feed.id}:${period}`))
+            .catch(error => console.error(`[Analytics] Failed to cache ${feed.id}:${period}:`, error))
+        );
+      }
+    }
+    
+    await Promise.allSettled(promises);
+    console.log('[Analytics] Cache warming completed');
+  } catch (error) {
+    console.error('[Analytics] Cache warming failed:', error);
+  } finally {
+    isWarmingCache = false;
+  }
+}
+
+// Start background refresh service
+export function startAnalyticsRefreshService(): void {
+  if (refreshInterval) {
+    console.log('[Analytics] Refresh service already running');
+    return;
+  }
+  
+  console.log('[Analytics] Starting refresh service...');
+  
+  // Initial cache warming
+  warmAnalyticsCache();
+  
+  // Set up hourly refresh
+  refreshInterval = setInterval(() => {
+    console.log('[Analytics] Starting scheduled cache refresh');
+    warmAnalyticsCache();
+  }, REFRESH_INTERVAL_MS);
+  
+  console.log('[Analytics] Refresh service started - will refresh every hour');
+}
+
+// Stop background refresh service
+export function stopAnalyticsRefreshService(): void {
+  if (refreshInterval) {
+    clearInterval(refreshInterval);
+    refreshInterval = null;
+    console.log('[Analytics] Refresh service stopped');
+  }
 }
 
 // --- Helper functions ---
