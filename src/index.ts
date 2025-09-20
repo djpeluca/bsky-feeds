@@ -1,5 +1,6 @@
 import dotenv from 'dotenv'
 import FeedGenerator from './server'
+import { startAnalyticsRefreshService } from './landing/analytics'
 
 const run = async () => {
   dotenv.config()
@@ -25,6 +26,9 @@ const run = async () => {
   console.log(
     `core: Running feed generator at http://${server.cfg.listenhost}:${server.cfg.port}`,
   )
+  
+  // Start analytics cache warming and refresh service
+  startAnalyticsRefreshService()
 }
 
 const maybeStr = (val?: string) => {
