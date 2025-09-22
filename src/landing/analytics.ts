@@ -59,8 +59,14 @@ async function computeAndCacheAnalytics(feedId: string, period: string = 'week')
 
   // --- Define the period window ---
   const now = new Date();
-  const periodStart = new Date(now);
-  periodStart.setHours(0, 0, 0, 0);
+
+  // Reset to local midnight in the proper timezone
+  const todayMidnight = new Date(
+    new Date().toLocaleString('en-US', { timeZone: tzName })
+  );
+  todayMidnight.setHours(0, 0, 0, 0);
+
+  const periodStart = new Date(todayMidnight);
   switch (period) {
     case 'day':
       break;
