@@ -57,7 +57,6 @@ const MODEL_PATTERNS = [
   /\bClaude( 3| 3\.5| Sonnet| Opus)?\b/,
   /\bGemini( Pro| Ultra)?\b/,
   /\bGrok( 2)?\b/,
-  /\bLlama( 2| 3| 3\.1)?\b/i,
   /\bMistral\b/,
   /\bMixtral\b/,
   /\bPhi-3\b/,
@@ -267,14 +266,28 @@ export class manager extends BaseFeedManager {
       await this.start()
       if (this.agent === null) return false
     }
+
+    // Exclude replies (post with parents)
+    if (post.record?.reply?.parent) {
+      return false
+    }
+
     if (this.blockedSet.has(post.author)) return false
     if (this.authorSet.has(post.author)) return true
+
     const matchString = this.buildMatchString(post)
     const cacheKey = `${post.uri}:${matchString}`
     if (this.patternCache.has(cacheKey)) {
       return this.patternCache.get(cacheKey)!
     }
-    // Grouped pattern matching for early exit
+
+    // Exclusion check — bail out early if it matches
+    if (EXCLUSION_PATTERNS.some(pattern => pattern.test(matchString))) {
+      this.patternCache.set(cacheKey, false)
+      return false
+    }
+
+    // Positive pattern matching groups for early exit
     const groups = [
       MAIN_PATTERNS,
       MODEL_PATTERNS,
@@ -282,14 +295,21 @@ export class manager extends BaseFeedManager {
       CONCEPT_PATTERNS,
       PERSONALITY_PATTERNS,
       APPLICATION_PATTERNS,
-    ];
-    let matches = false;
+      REGULATION_PATTERNS,
+      TOOL_PATTERNS,
+      HARDWARE_PATTERNS,
+      ETHICS_PATTERNS,
+      BENCHMARK_PATTERNS,
+    ]
+
+    let matches = false
     for (const group of groups) {
       if (group.some(pattern => pattern.test(matchString))) {
-        matches = true;
-        break;
+        matches = true
+        break
       }
     }
+
     this.patternCache.set(cacheKey, matches)
     return matches
   }
