@@ -267,7 +267,7 @@ export class manager extends BaseFeedManager {
       if (this.agent === null) return false
     }
 
-    // ❌ Exclude replies (post with parents)
+    // Exclude replies (post with parents)
     if (post.record?.reply?.parent) {
       return false
     }
@@ -281,13 +281,13 @@ export class manager extends BaseFeedManager {
       return this.patternCache.get(cacheKey)!
     }
 
-    // ❌ Exclusion check — bail out early if it matches
+    // Exclusion check — bail out early if it matches
     if (EXCLUSION_PATTERNS.some(pattern => pattern.test(matchString))) {
       this.patternCache.set(cacheKey, false)
       return false
     }
 
-    // ✅ Positive pattern matching groups for early exit
+    // Positive pattern matching groups for early exit
     const groups = [
       MAIN_PATTERNS,
       MODEL_PATTERNS,
@@ -312,8 +312,7 @@ export class manager extends BaseFeedManager {
 
     this.patternCache.set(cacheKey, matches)
     return matches
-}
-
+  }
 
   private buildMatchString(post: any): string {
     const parts: string[] = []
