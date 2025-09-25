@@ -42,7 +42,7 @@ const MAIN_PATTERNS = [
   /\bDeep Learning\b/i,
   /\bNeural Networks?\b/i,
   /\bLarge Language Models?\b/i,
-  /\bLLMs?\b/,                     // plural allowed
+  /\bLLMs?\b/i,                   // plural allowed
   /\bReasoning Model\b/i,
   /\bSmall Language Models?\b/i,   // SLM
   /\bFoundation Models?\b/i,
@@ -69,7 +69,6 @@ const MODEL_PATTERNS = [
   /\bMidjourney\b/,
   /\bSora\b/,
   /\bRunway\b/,
-  /\bPika\b/,
   /\bDeepSeek\b/,
   /\bxLAM\b/i,
   /\bAgentforce\b/,
@@ -95,8 +94,6 @@ const COMPANY_PATTERNS = [
   /\bSnowflake\b/,
   /\bStability AI\b/,
   /\bMidjourney\b/,
-  /\bRunway\b/,
-  /\bPika\b/,
   /\bElevenLabs\b/,
   /\bCharacter\.?ai\b/i,
   /\bPerplexity\b/,
@@ -120,7 +117,6 @@ const CONCEPT_PATTERNS = [
   /\bNatural Language Processing\b/i,
   /\bNLP\b/,
   /\bSpeech (Recognition|to[- ]Text|Text[- ]to[- ]Speech)\b/i,
-  /\bMultimodal\b/i,
   /\bAGI\b/,
   /\bArtificial General Intelligence\b/i,
   /\bAI Alignment\b/i,
@@ -129,8 +125,8 @@ const CONCEPT_PATTERNS = [
   /\bVector Database\b/i,
   /\bLangChain\b/i,
   /\bFlowise\b/i,
-  /\bAgent(ic|s?| Workflows?)\b/i,
-  /\bMoE\b/i,          // mixture of experts
+  /\bAI Agents?\b/i,              // "AI agent" or "AI agents" — explicit and safe                // the adjective (agentic) only
+  /\bAgent Workflows?\b/i,        // "Agent workflow" or "Agent workflows"// mixture of experts
 ];
 
 // Explicitly exclude noisy hashtags (AIART, aigirl, etc.)
@@ -167,7 +163,6 @@ const PERSONALITY_PATTERNS = [
 
   // Newer figures to track
   /\bMustafa Suleyman\b/,
-  /\bElon Musk\b/,       // xAI
   /\bReid Hoffman\b/,    // Inflection AI
   /\bRichard Socher\b/,  // You.com
 ];
@@ -182,7 +177,6 @@ const APPLICATION_PATTERNS = [
   /\bContent Generation\b/i,
   /\b(Image|Video|Audio|Text) Generation\b/i,
   /\bMachine Translation\b/i,
-  /\bSentiment Analysis\b/i,
   /\bRecommendation Systems?\b/i,
   /\bPredictive Analytics\b/i,
   /\bAutonomous Vehicles?\b/i,
